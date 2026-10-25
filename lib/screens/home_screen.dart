@@ -14,6 +14,13 @@ import '../widgets/role_switcher_dialog.dart';
 import '../services/restaurant_service.dart';
 import '../services/menu_service.dart';
 import '../services/session_provider.dart';
+import '../models/drop_state.dart';
+import '../models/dish_search_models.dart';
+import '../models/dish_search_state.dart';
+import '../widgets/search/dish_results_section.dart';
+import '../widgets/search/trending_chips.dart';
+import '../widgets/drops/drops_section.dart';
+import '../widgets/drops/hold_banner.dart';
 
 String _restaurantImage(int? id, String name) {
   final n = name.toLowerCase();
@@ -113,16 +120,20 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentPage = 0;
   bool _hasMore = true;
   String? _error;
+  DropState? _dropState;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
     _loadRestaurants(reset: true);
+    // Live drops, the caller's slot hold and waitlist position stay fresh while the home screen is open.
+    _dropState = context.read<DropState>()..retainPolling();
   }
 
   @override
   void dispose() {
+    _dropState?.releasePolling();
     _searchController.dispose();
     _scrollController.dispose();
     _debounceTimer?.cancel();
@@ -138,7 +149,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _pickTrending(String query) {
+    _searchController.text = query;
+    _searchController.selection = TextSelection.collapsed(offset: query.length);
+    _onSearchChanged(query);
+  }
+
   void _onSearchChanged(String value) {
+    // craving search (hybrid retrieval on the backend); it debounces itself
+    context.read<DishSearchState>().onQueryChanged(value);
     _debounceTimer?.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 300), () {
       setState(() {
@@ -260,6 +279,24 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {
       if (mounted) setState(() => _loadingMore = false);
     }
+  }
+
+  /// Opens the restaurant that serves a dish from the craving results.
+  void _openDish(DishHit hit) {
+    mock.Restaurant? restaurant;
+    for (final r in _apiRestaurants) {
+      if (r.backendId == hit.restaurantId) {
+        restaurant = r;
+        break;
+      }
+    }
+    if (restaurant == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${hit.restaurantName ?? 'That restaurant'} is still loading. Try again in a moment.')),
+      );
+      return;
+    }
+    Navigator.of(context).pushNamed('/restaurant', arguments: restaurant);
   }
 
   List<mock.Restaurant> get _displayRestaurants {
@@ -413,7 +450,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontWeight: FontWeight.normal,
                         ),
                         decoration: InputDecoration(
-                          hintText: "Search for foods, restaurants...",
+                          hintText: "Search dishes, or describe a craving...",
                           prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
                           suffixIcon: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -423,6 +460,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   icon: const Icon(Icons.clear, size: 20, color: Colors.grey),
                                   onPressed: () {
                                     _searchController.clear();
+                                    context.read<DishSearchState>().clear();
                                     setState(() {
                                       _searchQuery = "";
                                     });
@@ -454,6 +492,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ),
+                    // Rising searches someone can order today; tapping one runs it
+                    TrendingChips(onPick: _pickTrending),
+                    // Top matches for a craving like "something sweet but also spicy"
+                    DishResultsSection(onOpen: _openDish),
+
                     // Categories Row
                     SizedBox(
                       height: 100,
@@ -566,6 +609,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 16),
 
+                    // Active drop slot hold (countdown) and limited-drop row
+                    const HoldBanner(),
+                    const DropsSection(),
+
                     // Header row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -635,9 +682,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 16),
 
                     // Restaurants list — shimmer while loading, real/mock data when ready
-                    _loading
+                    (context.watch<DishSearchState>().active && !_loading && _displayRestaurants.isEmpty)
+                        ? const SizedBox.shrink()
+                        : _loading
                         ? SizedBox(
-                            height: 280,
+                            height: 350,
                             child: ListView.builder(
                               scrollDirection: Axis.horizontal,
                               itemCount: 3,
@@ -645,7 +694,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 margin: const EdgeInsets.only(right: 16, bottom: 8),
                                 child: const ShimmerPlaceholder(
                                   width: 260,
-                                  height: 280,
+                                  height: 350,
                                   borderRadius: 20,
                                 ),
                               ),
@@ -694,7 +743,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               )
                             : SizedBox(
-                                height: 280,
+                                height: 350,
                                 child: ListView.builder(
                                   scrollDirection: Axis.horizontal,
                                   itemCount: _displayRestaurants.length,

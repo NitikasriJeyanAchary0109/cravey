@@ -1,0 +1,234 @@
+{
+    "restaurants": [
+        {
+            "id": 1,
+            "name": "Cravey Kitchen"
+        },
+        {
+            "id": 2,
+            "name": "Bella Napoli"
+        },
+        {
+            "id": 3,
+            "name": "Smokehouse 66"
+        },
+        {
+            "id": 4,
+            "name": "Spice Route"
+        },
+        {
+            "id": 5,
+            "name": "Tokyo Ramen House"
+        },
+        {
+            "id": 6,
+            "name": "Casa Fuego"
+        },
+        {
+            "id": 7,
+            "name": "Sugar & Spice Patisserie"
+        },
+        {
+            "id": 8,
+            "name": "Green Bowl"
+        },
+        {
+            "id": 9,
+            "name": "Bangkok Street"
+        }
+    ],
+    "suggestions": [
+        {
+            "id": 2,
+            "restaurantId": 2,
+            "restaurantName": "Bella Napoli",
+            "type": "ADD_DISH",
+            "status": "NEW",
+            "trendKey": "fusion:italian+korean",
+            "trendLabel": "Italian \u00d7 Korean fusion",
+            "headline": "\"Italian \u00d7 Korean fusion\" is trending and not on your menu",
+            "body": "120 people searched for it in the last 7 days, 22\u00d7 its usual level (about 4 a week before). 100% of those searches found no dish that matches. You serve Italian, so it fits your menu. Your menu showed up in 120 of those searches and was tapped 16 times, so they are already looking at kitchens like yours. Suggested dish: Kimchi Carbonara.",
+            "score": 18.4,
+            "recentSearchers": 120,
+            "baselineSearchers": 15,
+            "growth": 22.14,
+            "unmetShare": 1.0,
+            "impressions": 120,
+            "taps": 16,
+            "payload": {
+                "suggestedName": "Kimchi Carbonara",
+                "description": "Our take on Kimchi Carbonara: Italian meets Korean.",
+                "flavorTags": [
+                    "creamy",
+                    "spicy",
+                    "rich"
+                ],
+                "dishId": null,
+                "dishName": null,
+                "price": null,
+                "dishAvailable": null,
+                "suggestedSlots": null,
+                "suggestedStartsAt": null,
+                "suggestedEndsAt": null,
+                "exampleSearches": [
+                    "italian korean fusion pasta",
+                    "kimchi carbonara",
+                    "bulgogi pizza",
+                    "gochujang pizza"
+                ],
+                "estimate": null
+            },
+            "snoozedUntil": null,
+            "createdAt": "2026-10-25T08:55:38.15688"
+        },
+        {
+            "id": 1,
+            "restaurantId": 1,
+            "restaurantName": "Cravey Kitchen",
+            "type": "ADD_DISH",
+            "status": "NEW",
+            "trendKey": "fusion:italian+korean",
+            "trendLabel": "Italian \u00d7 Korean fusion",
+            "headline": "\"Italian \u00d7 Korean fusion\" is trending and not on your menu",
+            "body": "120 people searched for it in the last 7 days, 22\u00d7 its usual level (about 4 a week before). 100% of those searches found no dish that matches. You serve Italian, so it fits your menu. Your menu showed up in 74 of those searches and was tapped 0 times, so they are already looking at kitchens like yours. Suggested dish: Kimchi Carbonara.",
+            "score": 18.4,
+            "recentSearchers": 120,
+            "baselineSearchers": 15,
+            "growth": 22.14,
+            "unmetShare": 1.0,
+            "impressions": 74,
+            "taps": 0,
+            "payload": {
+                "suggestedName": "Kimchi Carbonara",
+                "description": "Our take on Kimchi Carbonara: Italian meets Korean.",
+                "flavorTags": [
+                    "creamy",
+                    "spicy",
+                    "rich"
+                ],
+                "dishId": null,
+                "dishName": null,
+                "price": null,
+                "dishAvailable": null,
+                "suggestedSlots": null,
+                "suggestedStartsAt": null,
+                "suggestedEndsAt": null,
+                "exampleSearches": [
+                    "italian korean fusion pasta",
+                    "kimchi carbonara",
+                    "bulgogi pizza",
+                    "gochujang pizza"
+                ],
+                "estimate": null
+            },
+            "snoozedUntil": null,
+            "createdAt": "2026-10-25T08:55:38.136766"
+        },
+        {
+            "id": 3,
+            "restaurantId": 6,
+            "restaurantName": "Casa Fuego",
+            "type": "MAKE_DROP",
+            "status": "NEW",
+            "trendKey": "dish:birria+taco",
+            "trendLabel": "Birria Taco",
+            "headline": "Turn Beef Birria Tacos into a Drop",
+            "body": "39 people searched for it in the last 7 days, 20\u00d7 its usual level (about 1 a week before). Your Beef Birria Tacos showed up in 39 of those searches and was tapped 12 times. A limited Drop of 10 slots sells a known amount instead of risking waste, and rewards the people who searched. Over the last 4 weeks 7 delivered orders came from 13 taps on your dishes for this search, so expect about 6 orders (around \u20b93420) a week at this rate. A rough guide, not a promise.",
+            "score": 8.846,
+            "recentSearchers": 39,
+            "baselineSearchers": 1,
+            "growth": 20.38,
+            "unmetShare": 0.0,
+            "impressions": 39,
+            "taps": 12,
+            "payload": {
+                "suggestedName": null,
+                "description": null,
+                "flavorTags": [],
+                "dishId": 68,
+                "dishName": "Beef Birria Tacos",
+                "price": 399.0,
+                "dishAvailable": true,
+                "suggestedSlots": 10,
+                "suggestedStartsAt": "2026-10-26T18:00",
+                "suggestedEndsAt": "2026-10-26T21:00",
+                "exampleSearches": [
+                    "birria taco",
+                    "cheesy birria tacos",
+                    "birria tacos",
+                    "taco birria"
+                ],
+                "estimate": {
+                    "weeklyOrders": 6,
+                    "weeklyRevenue": 3420,
+                    "ordersObserved": 7,
+                    "tapsObserved": 13,
+                    "basis": "PHRASE"
+                }
+            },
+            "snoozedUntil": null,
+            "createdAt": "2026-10-25T08:55:38.157713"
+        }
+    ],
+    "rising": [
+        {
+            "label": "Italian \u00d7 Korean fusion",
+            "kind": "FUSION",
+            "recentSearchers": 120,
+            "growth": 22.14,
+            "unmetShare": 1.0,
+            "exampleSearches": [
+                "italian korean fusion pasta",
+                "kimchi carbonara",
+                "bulgogi pizza",
+                "gochujang pizza"
+            ]
+        },
+        {
+            "label": "Birria Taco",
+            "kind": "DISH",
+            "recentSearchers": 39,
+            "growth": 20.38,
+            "unmetShare": 0.0,
+            "exampleSearches": [
+                "birria taco",
+                "cheesy birria tacos",
+                "birria tacos",
+                "taco birria"
+            ]
+        }
+    ],
+    "searchOrders": {
+        "days": 28,
+        "orders": 69,
+        "units": 98,
+        "revenue": 34192,
+        "topPhrases": [
+            {
+                "label": "Burger",
+                "orders": 12,
+                "revenue": 5593
+            },
+            {
+                "label": "Pizza",
+                "orders": 11,
+                "revenue": 7633
+            },
+            {
+                "label": "Birria Taco",
+                "orders": 9,
+                "revenue": 4677
+            },
+            {
+                "label": "Comfort + Creamy",
+                "orders": 7,
+                "revenue": 3690
+            },
+            {
+                "label": "Spicy + Sweet",
+                "orders": 7,
+                "revenue": 1071
+            }
+        ]
+    }
+}
