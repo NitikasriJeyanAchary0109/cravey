@@ -50,11 +50,8 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
         role: role,
       );
 
-      await session.loginAsDemo(
-        role,
-        email: _emailController.text.trim(),
-        name: _nameController.text.trim(),
-      );
+      // sign in with the account that was just created, like anyone else
+      await session.loginWithCredentials(_emailController.text.trim(), _passwordController.text);
 
       if (mounted) {
         setState(() => _isLoading = false);

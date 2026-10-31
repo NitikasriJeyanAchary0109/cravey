@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../services/api_client.dart';
 import '../services/session_provider.dart';
 import '../theme/app_theme.dart';
 import 'scale_tap.dart';
@@ -22,6 +23,19 @@ class _RoleSwitcherContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = context.watch<SessionProvider>();
     final currentRole = session.effectiveRole.toUpperCase();
+
+    if (!SessionProvider.demoLoginAvailable) {
+      return Container(
+        key: const ValueKey('role-switcher-unavailable'),
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+        child: const SafeArea(
+          top: false,
+          child: Text('Switching roles is only available in demo builds. Sign out and sign in with another account to see a different view.',
+              style: TextStyle(fontSize: 15, height: 1.4)),
+        ),
+      );
+    }
 
     final roles = [
       {
@@ -122,9 +136,15 @@ class _RoleSwitcherContent extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: 10.0),
               child: ScaleTap(
                 onTap: () async {
+                  final messenger = ScaffoldMessenger.of(context);
                   Navigator.of(context).pop();
                   if (!isCurrent) {
-                    await session.loginAsDemo(key);
+                    try {
+                      await session.loginAsDemo(key);
+                    } catch (e) {
+                      messenger.showSnackBar(SnackBar(content: Text(e is ApiException ? e.message : 'Could not switch role.')));
+                      return;
+                    }
                     final route = SessionProvider.routeForRole(key);
                     if (context.mounted) {
                       Navigator.of(context).pushNamedAndRemoveUntil(route, (route) => false);

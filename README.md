@@ -375,7 +375,7 @@ Cravey can seed demo accounts for instant testing of all platform workflows. **T
 | **Delivery Partner** | `driver@cravey.com` | `Password123!` | Accept orders, turn-by-turn routing, earnings history |
 | **Administrator** | `admin@cravey.com` | `Password123!` | System metrics, user privileges, restaurant verification |
 
-> **Tip**: You can also use the in-app **Demo Login** buttons on the Login Screen or the **Role Switcher** in the drawer to instantly test different views without logging out.
+> **Tip**: In a debug build against a backend started with the `demo` profile you can also use the in-app **Quick Demo Sign-In** button and the **Role Switcher** in the drawer to test different views without logging out.
 
 ---
 
@@ -474,5 +474,5 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
 - Set `JWT_SECRET` to a long random value. Without it the app signs tokens with a key that is in this repository, so anyone could make a token for any account. Run production with `SPRING_PROFILES_ACTIVE=prod`: that profile refuses to start on the default key. Other profiles only log a warning.
 - Leave `SEED_DEMO_ACCOUNTS` unset (off) and do not use the `demo` or `dev` profiles on a database real people use: they create accounts with known credentials.
-- The app's **Quick Demo Sign-In** buttons mint their own tokens with the repository's default key (`lib/services/jwt_helper.dart`), so they only work against a backend that uses that key. That is intended for demos; do not ship a build whose backend accepts it.
+- **Quick Demo Sign-In** and the role switcher are issued by the backend (`POST /api/auth/demo-login`), which exists only in the `demo` and `dev` profiles, and only for the four fixed demo accounts. The app holds no signing key. Even so, the buttons are shown only in debug builds or builds made with `--dart-define=ENABLE_DEMO_LOGIN=true`, so do not set that for a release.
 

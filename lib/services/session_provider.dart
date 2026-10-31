@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'api_client.dart';
 import 'auth_service.dart';
 import 'user_service.dart';
-import 'jwt_helper.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import '../models/models.dart';
 
 class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
@@ -45,23 +46,6 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
-  /// Default email mapping to real users present in the PostgreSQL database.
-  static String defaultEmailForRole(String role) {
-    switch (role.toUpperCase()) {
-      case 'OWNER':
-      case 'RESTAURANT':
-        return 'arunkumar2006.d@gmail.com';
-      case 'DELIVERY':
-      case 'DELIVERY_PARTNER':
-        return 'rahul.singh@gmail.com';
-      case 'ADMIN':
-        return 'admin1@zomato.com';
-      case 'CUSTOMER':
-      default:
-        return 'aarav.sharma@gmail.com';
-    }
-  }
-
   static String defaultNameForRole(String role) {
     switch (role.toUpperCase()) {
       case 'OWNER':
@@ -99,19 +83,37 @@ class SessionProvider extends ChangeNotifier with WidgetsBindingObserver {
   int? get customerId => _customer?.customerId;
   bool get isEmailVerified => _user?.emailVerified ?? AuthService.instance.isEmailVerified;
 
-  /// Sign-in using real backend HS256 tokens matching the PostgreSQL database users.
-  Future<void> loginAsDemo(String role, {String? email, String? name}) async {
-    final resolvedRole = role.toUpperCase();
-    final resolvedEmail = email ?? defaultEmailForRole(resolvedRole);
-    final resolvedName = name ?? defaultNameForRole(resolvedRole);
-    final realToken = JwtHelper.generateBackendToken(resolvedEmail, resolvedRole);
+  /// "Quick Demo Sign-In" and the role switcher exist only in debug builds, or in a build made with `--dart-define=ENABLE_DEMO_LOGIN=true`.
+  /// Even then they only work against a backend running the `demo` or `dev` profile, which issues the token: the app holds no signing key.
+  static const bool demoLoginAvailable = kDebugMode || bool.fromEnvironment('ENABLE_DEMO_LOGIN');
 
-    ApiClient.instance.setToken(realToken);
+  /// Signs in as one of the four fixed demo accounts (CUSTOMER, OWNER, DELIVERY, ADMIN) through the backend's demo login.
+  /// Throws an [ApiException] with a message that is safe to show when the build or the server does not offer it.
+  Future<void> loginAsDemo(String role) async {
+    if (!demoLoginAvailable) {
+      throw ApiException('Demo sign-in is not available in this build. Sign in with an account.');
+    }
+    final resolvedRole = role.toUpperCase();
+    final Map<String, dynamic> data;
+    try {
+      final res = await ApiClient.instance.rawDio.post<Map<String, dynamic>>('/api/auth/demo-login', data: {'role': resolvedRole});
+      data = res.data!;
+    } on DioException catch (e) {
+      final body = e.response?.data;
+      final message = body is Map ? body['message']?.toString() : null;
+      // 404 from a server that does not run the demo profile; a 404 that names the demo account is a real answer
+      if (e.response?.statusCode == 404 && (message == null || !message.contains('demo account'))) {
+        throw ApiException('Demo sign-in is not available on this server. Sign in with an account.', statusCode: 404);
+      }
+      throw ApiException.fromDioException(e);
+    }
+    ApiClient.instance.setToken(data['accessToken'] as String);
 
     _selectedRole = resolvedRole;
     _user = AppUser(
-      name: resolvedName,
-      email: resolvedEmail,
+      userId: (data['userId'] as num?)?.toInt(),
+      name: (data['name'] as String?)?.isNotEmpty == true ? data['name'] as String : defaultNameForRole(resolvedRole),
+      email: data['email'] as String?,
       role: resolvedRole,
       emailVerified: true,
     );

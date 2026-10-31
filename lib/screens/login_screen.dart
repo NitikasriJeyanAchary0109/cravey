@@ -41,32 +41,13 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _passwordController.text;
 
     try {
-      if (password.isNotEmpty) {
-        await context.read<SessionProvider>().loginWithCredentials(email, password);
-      } else {
-        await context.read<SessionProvider>().loginAsDemo(
-              role,
-              email: email.isNotEmpty ? email : null,
-            );
-      }
+      await context.read<SessionProvider>().loginWithCredentials(email, password);
       if (mounted) {
         setState(() => _isLoading = false);
         _navigateToDashboard(role);
       }
     } catch (e) {
       if (mounted) {
-        try {
-          await context.read<SessionProvider>().loginAsDemo(
-                role,
-                email: email.isNotEmpty ? email : null,
-              );
-          if (mounted) {
-            setState(() => _isLoading = false);
-            _navigateToDashboard(role);
-            return;
-          }
-        } catch (_) {}
-
         String errorMessage = 'Login failed. Please check your credentials.';
         if (e is UnauthorizedException) {
           errorMessage = 'Invalid email or password.';
@@ -94,7 +75,18 @@ class _LoginScreenState extends State<LoginScreen> {
   void _handleQuickDemoSignIn() async {
     setState(() => _isLoading = true);
     final role = _currentRole;
-    await context.read<SessionProvider>().loginAsDemo(role);
+    try {
+      await context.read<SessionProvider>().loginAsDemo(role);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e is ApiException ? e.message : 'Demo sign-in did not work.'),
+          backgroundColor: Colors.redAccent,
+        ));
+      }
+      return;
+    }
     if (mounted) {
       setState(() => _isLoading = false);
       _navigateToDashboard(role);
@@ -407,8 +399,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Quick Demo Sign In Button
-                    ScaleTap(
+                    // Quick Demo Sign In Button (debug or demo builds only)
+                    if (SessionProvider.demoLoginAvailable) ScaleTap(
                       onTap: _isLoading ? null : _handleQuickDemoSignIn,
                       child: Container(
                         width: double.infinity,

@@ -46,7 +46,12 @@ public class JwtService {
     }
 
     public String generateToken(String email, String role, Integer userId, String name) {
-        long validityMs = (accessTokenValiditySeconds > 0 ? accessTokenValiditySeconds : ACCESS_TOKEN_VALIDITY_SECONDS) * 1000L;
+        return generateToken(email, role, userId, name, accessTokenValiditySeconds > 0 ? accessTokenValiditySeconds : ACCESS_TOKEN_VALIDITY_SECONDS);
+    }
+
+    /** Same token with a chosen lifetime; used for demo sign-in, which has no refresh token. */
+    public String generateToken(String email, String role, Integer userId, String name, long validitySeconds) {
+        long validityMs = validitySeconds * 1000L;
         var builder = Jwts.builder()
                 .setSubject(email)
                 .claim("role", role)
