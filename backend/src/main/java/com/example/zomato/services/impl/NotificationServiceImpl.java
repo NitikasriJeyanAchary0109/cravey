@@ -27,7 +27,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Override
     public Notification getById(Integer id) {
         return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Notification not found"));
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "Notification not found"));
     }
 
     @Override

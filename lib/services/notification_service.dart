@@ -26,6 +26,26 @@ class NotificationApiService {
     }
   }
 
+  /// GET /api/notifications/mine: the signed-in person's own notifications, newest first.
+  Future<List<NotificationModel>> getMine() async {
+    try {
+      final res = await _dio.get('/api/notifications/mine');
+      return (res.data as List).map((e) => NotificationModel.fromJson(e)).toList();
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  /// GET /api/notifications/mine/unread
+  Future<List<NotificationModel>> getMyUnread() async {
+    try {
+      final res = await _dio.get('/api/notifications/mine/unread');
+      return (res.data as List).map((e) => NotificationModel.fromJson(e)).toList();
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
   Future<List<NotificationModel>> getByUser(int userId) async {
     try {
       final res = await _dio.get('/api/notifications/user/$userId');
