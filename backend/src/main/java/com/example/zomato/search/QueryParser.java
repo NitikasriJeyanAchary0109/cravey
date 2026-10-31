@@ -32,7 +32,8 @@ public final class QueryParser {
 
     public ParsedQuery parse(String raw) {
         String original = raw == null ? "" : raw.trim();
-        String text = original.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
+        // 🍕🔥 means pizza and spicy; picture characters never reach the matching below
+        String text = EmojiLexicon.translate(original).toLowerCase(Locale.ROOT).replaceAll("\\s+", " ").trim();
 
         Float maxPrice = null;
         Matcher pm = PRICE.matcher(text);

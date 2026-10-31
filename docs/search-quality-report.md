@@ -34,30 +34,30 @@ tags an owner would pick. Metrics are recall@10, MRR and nDCG@10, shown as `reca
 
 | condition | combo | single | constraint | intent | name | ALL |
 |---|---|---|---|---|---|---|
-| keyword only (BM25) | 0.56 / 0.77 / 0.56 | 0.66 / 0.77 / 0.66 | 0.70 / 0.90 / 0.69 | 0.70 / 0.78 / 0.69 | 1.00 / 0.90 / 0.93 | 0.71 / 0.82 / 0.69 |
+| keyword only (BM25) | 0.56 / 0.77 / 0.56 | 0.66 / 0.77 / 0.66 | 0.70 / 0.90 / 0.69 | 0.70 / 0.78 / 0.69 | 1.00 / 0.90 / 0.93 | 0.71 / 0.81 / 0.69 |
 | dense only | 0.34 / 0.68 / 0.37 | 0.59 / 0.82 / 0.63 | 0.60 / 0.76 / 0.59 | 0.53 / 0.61 / 0.51 | 1.00 / 0.93 / 0.95 | 0.59 / 0.75 / 0.59 |
 | hybrid, no tags | 0.44 / 0.81 / 0.48 | 0.73 / 0.90 / 0.76 | 0.77 / 0.74 / 0.70 | 0.69 / 0.88 / 0.70 | 1.00 / 0.95 / 0.96 | 0.70 / 0.86 / 0.70 |
-| hybrid + tags | 0.51 / 0.89 / 0.54 | 0.83 / 1.00 / 0.86 | 0.70 / 0.81 / 0.71 | 0.75 / 0.82 / 0.72 | 1.00 / 0.95 / 0.96 | 0.74 / 0.90 / 0.74 |
-| **full (+ coverage lift)** | 0.54 / 0.86 / 0.58 | 0.83 / 1.00 / 0.86 | 0.67 / 0.94 / 0.71 | 0.71 / 0.82 / 0.70 | 1.00 / 0.95 / 0.96 | **0.73 / 0.90 / 0.75** |
+| hybrid + tags | 0.51 / 0.89 / 0.54 | 0.83 / 1.00 / 0.86 | 0.75 / 0.81 / 0.73 | 0.75 / 0.83 / 0.74 | 1.00 / 0.95 / 0.96 | 0.74 / 0.90 / 0.75 |
+| **full (+ coverage lift)** | 0.54 / 0.86 / 0.58 | 0.83 / 1.00 / 0.86 | 0.73 / 0.88 / 0.73 | 0.75 / 0.83 / 0.74 | 1.00 / 0.95 / 0.96 | **0.75 / 0.90 / 0.76** |
 
 ### Dishes tagged by their owners (an upper bound)
 
 | condition | ALL |
 |---|---|
-| keyword only (BM25) | 0.88 / 0.88 / 0.85 |
+| keyword only (BM25) | 0.89 / 0.89 / 0.86 |
 | dense only | 0.61 / 0.77 / 0.61 |
-| **full** | **0.89 / 0.96 / 0.89** |
+| **full** | **0.89 / 0.96 / 0.90** |
 
 Read this one with care: relevance is judged from the same owner tags the system matches on, so it measures how well
 the ranking uses good tags, not how well it guesses.
 
 ### What the numbers say
 
-- The first result is right far more often with the hybrid (MRR 0.90 vs 0.82 with keywords alone, 0.96 vs 0.88 with
+- The first result is right far more often with the hybrid (MRR 0.90 vs 0.81 with keywords alone, 0.96 vs 0.89 with
   owner tags). Recall@10 is close to keyword-only: most of the gain is ranking, not finding.
 - **Embeddings alone are the weakest part** here (0.59 recall). A small sentence model is poor at "sweet and spicy" as
   a pair; it helps on paraphrases ("something warm and cozy for a rainy day") and for ordering, not as the main signal.
-- Good tags matter most: owner tags lift recall from 0.73 to 0.89 and MRR from 0.90 to 0.96. That is why the owner form
+- Good tags matter most: owner tags lift recall from 0.75 to 0.89 and MRR from 0.90 to 0.96. That is why the owner form
   asks for at least two flavor tags and suggests them as the owner types.
 - Typo handling works through the keyword side ("margarita pizza" is in the name group, which scores recall 1.00: both Margherita pizzas are in the top ten).
 
@@ -119,3 +119,20 @@ scripts/search/download_model.sh            # 133 MB model, once
 scripts/search/fetch_indian_food.sh         # optional external tagger check
 cd backend && ./mvnw test -Dtest=RealModelSearchEvalTest   # writes target/search-eval.md
 ```
+
+## How people actually type: emoji, "hungover", and naming a food
+
+Found by probing the live search with queries a customer might send; the first answers were poor, so three rules were added (all without a model or a list of dishes):
+
+- **Emoji mean food.** `🍕🔥` is read as "pizza spicy" (`EmojiLexicon`, about 70 food and drink emoji). Before, it returned Thai iced tea, ramen and dorayaki, because the model places a picture character near anything. An emoji with no food meaning (`😀`) now finds nothing instead of something arbitrary.
+- **"Hungover" and "hangover" are comfort cravings**, like "cozy" and "hearty". Before: no results.
+- **A named food comes first.** Dishes that contain every food word of the query come ahead of dishes that are only close in meaning or share a flavor, keeping the existing order inside each group (a compound counts: "cheeseburger" is a burger). When no dish contains all the words ("truffle ramen"), the last word names the kind of dish, so the ramen dishes lead and the truffle dessert follows. With vegetarian on, "cheesy burger" now starts with the Veggie Smash Burger instead of mac and cheese.
+
+Not a bug: "dumplins" finds the gyoza **and** Gulab Jamun, exactly as "dumpling" does, because the catalog describes Gulab Jamun as "milk dumplings".
+
+Effect on the evaluation (54 queries, tags guessed automatically, full pipeline): ALL recall@10 0.73 → 0.75, MRR 0.90 → 0.90, nDCG 0.75 → 0.76; with owner tags nDCG 0.89 → 0.90. One group got worse: the "constraint" queries' MRR fell from 0.94 to 0.88 (recall rose 0.67 → 0.73), so for a few of them the first result is a named food that does not satisfy the constraint as well as the old first result did. The intent group improved (recall 0.71 → 0.75). The evaluation set is small (8 constraint queries), so treat single cells as noisy.
+
+Note that "vegetarian" is the filter, not "vegan": `veg=true` keeps dishes flagged vegetarian, which can include dairy and eggs.
+
+Tests: `SearchRelevanceRealModelTest` (7, real model) and `EmojiLexiconTest` (4).
+

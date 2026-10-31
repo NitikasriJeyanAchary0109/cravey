@@ -86,7 +86,7 @@ public enum Flavor {
             "a rich, decadent and indulgent dish, heavy and luxurious",
             "deeply rich and indulgent, a heavy treat"),
 
-    COMFORT("Comfort", "comfort comforting cozy cosy warm warming hearty homely filling soul",
+    COMFORT("Comfort", "comfort comforting cozy cosy warm warming hearty homely filling soul hungover hangover",
             "mac and cheese:0.9 mashed:0.7 stew:0.85 soup:0.6 pot pie:0.9 lasagna:0.85 biryani:0.5 dal:0.7 khichdi:0.9 noodles:0.4 "
                     + "pasta:0.4 burger:0.4 fries:0.3 grilled cheese:0.9 meatloaf:0.9 chowder:0.8 ramen:0.6 congee:0.85 shepherd:0.85 "
                     + "casserole:0.9 dumplings:0.5 curry rice:0.7 rajma:0.7 chole:0.5 hearty:0.8 comfort:0.95 cozy:0.9 porridge:0.8 "

@@ -104,6 +104,11 @@ public class HybridSearchService {
         long t0 = System.nanoTime();
         index.ensureLoaded();
         ParsedQuery parsed = parser.parse(req.q());
+        if (!hasWords(parsed.normalized())) {
+            // nothing but symbols (an emoji that means no food): there is nothing to look for, and meaning alone would return something arbitrary
+            boolean sem = opt.dense() && index.provider().isSemantic() && index.vectors().size() > 0;
+            return new Result(parsed, sem ? "HYBRID" : "KEYWORD", 0, List.of(), (System.nanoTime() - t0) / 1_000_000, Diagnostics.NONE);
+        }
         int k = Math.max(1, Math.min(req.k() <= 0 ? props.defaultK() : req.k(), props.maxK()));
 
         boolean vegOnly = Boolean.TRUE.equals(req.veg()) || parsed.vegOnly();
@@ -190,8 +195,12 @@ public class HybridSearchService {
             }
         }
 
+        Set<Integer> namedFood = opt.bm25() ? namedFood(fused.keySet(), candidates, parsed.normalized().isBlank() ? parsed.original() : parsed.normalized()) : Set.of();
+
         List<Map.Entry<Integer, Double>> ranked = new ArrayList<>(fused.entrySet());
         ranked.sort(Map.Entry.<Integer, Double>comparingByValue().reversed().thenComparing(Map.Entry.comparingByKey()));
+        // a customer who names food ("cheesy burger") gets the dishes that are that food first, then the rest; the order inside each group is unchanged
+        if (!namedFood.isEmpty()) ranked.sort(Comparator.comparing(e -> !namedFood.contains(e.getKey())));
 
         // the dense list returns every dish ranked by similarity, so without a cutoff "pasta" would end with whatever is nearest in meaning
         // (tiramisu); only dishes that are relevant for a reason this scope accepts are shown
@@ -202,7 +211,7 @@ public class HybridSearchService {
         Set<Integer> relevant = new HashSet<>(denseRelevant);
         relevant.addAll(lexicalRelevant);
         relevant.addAll(tagRelevant);
-        double best = ranked.isEmpty() ? 1.0 : ranked.get(0).getValue();
+        double best = ranked.stream().mapToDouble(Map.Entry::getValue).max().orElse(1.0);
 
         Set<String> queryTerms = new HashSet<>(Bm25Index.tokenize(parsed.normalized()));
         List<Hit> hits = new ArrayList<>();
@@ -243,6 +252,40 @@ public class HybridSearchService {
             }
         }
         return allowed;
+    }
+
+    static boolean hasWords(String text) {
+        if (text == null) return false;
+        for (int i = 0; i < text.length(); i++) if (Character.isLetterOrDigit(text.charAt(i))) return true;
+        return false;
+    }
+
+    /**
+     * The dishes that really are the food the customer named, which come before dishes that are only close to it in meaning or share a flavor ("cheesy
+     * burger" is answered by burgers before mac and cheese). "Food words" are the content words that are not flavors or moods. A dish is that food when it
+     * contains all of them (a compound counts: "cheeseburger" is a burger). When no dish contains all of them ("truffle ramen"), the last word names the
+     * kind of dish in English and the ones before it describe it, so dishes of that kind are the ones. Empty without food words, and for a single word
+     * that no dish contains (typos are the keyword index's job).
+     */
+    private static Set<Integer> namedFood(Set<Integer> ids, Map<Integer, DishDoc> candidates, String text) {
+        List<String> food = Bm25Index.contentTerms(text).stream().filter(t -> !PhraseMiner.isFlavorOrMood(t)).distinct().toList();
+        if (food.isEmpty()) return Set.of();
+        String kind = food.get(food.size() - 1);
+        Set<Integer> all = new HashSet<>(), ofKind = new HashSet<>();
+        for (int id : ids) {
+            DishDoc d = candidates.get(id);
+            if (d == null) continue;
+            List<String> tokens = Bm25Index.tokenize(d.name() + " " + d.description() + " " + d.ingredients() + " " + d.category());
+            if (food.stream().allMatch(t -> containsFood(tokens, t))) all.add(id);
+            if (containsFood(tokens, kind)) ofKind.add(id);
+        }
+        if (!all.isEmpty()) return all;
+        return food.size() >= 2 ? ofKind : Set.of();
+    }
+
+    private static boolean containsFood(List<String> tokens, String word) {
+        for (String t : tokens) if (t.equals(word) || (t.length() >= word.length() + 3 && t.endsWith(word))) return true;
+        return false;
     }
 
     private float[] queryVector(String text) {
