@@ -48,6 +48,12 @@ public class NotificationController {
         return service.getUnreadNotifications(userIdOf(auth)).stream().map(NotificationResponse::from).sorted(NEWEST_FIRST).toList();
     }
 
+    /** Marks all of the caller's own notifications as read. */
+    @PutMapping("/mine/read-all")
+    public java.util.Map<String, Integer> readAll(Authentication auth) {
+        return java.util.Map.of("marked", service.markAllAsRead(userIdOf(auth)));
+    }
+
     @GetMapping("/{id}")
     public NotificationResponse getById(@PathVariable Integer id, Authentication auth) {
         return NotificationResponse.from(requireOwn(id, auth));

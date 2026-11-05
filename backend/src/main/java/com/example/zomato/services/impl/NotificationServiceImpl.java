@@ -48,6 +48,14 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    public int markAllAsRead(Integer userId) {
+        List<Notification> unread = repository.findByUser_UserIdAndIsRead(userId, false);
+        unread.forEach(n -> n.setRead(true));
+        repository.saveAll(unread);
+        return unread.size();
+    }
+
+    @Override
     public void deleteNotification(Integer id) {
         repository.deleteById(id);
     }

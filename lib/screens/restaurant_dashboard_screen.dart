@@ -9,6 +9,7 @@ import '../services/dish_search_service.dart';
 import '../services/dish_photo_picker.dart';
 import '../services/api_client.dart';
 import '../widgets/owner/add_dish_dialog.dart';
+import '../widgets/notification_bell.dart';
 import '../widgets/owner/insights_tab.dart';
 import '../models/insights_models.dart';
 import '../models/owner_insights_state.dart';
@@ -318,6 +319,11 @@ class _RestaurantDashboardScreenState extends State<RestaurantDashboardScreen>
                       ],
                     ),
                   ),
+                  // Notifications (the weekly digest lands here); a digest's "Open Insights" comes back as 'insights'
+                  NotificationBell(onPressed: () async {
+                    final result = await Navigator.of(context).pushNamed('/notifications');
+                    if (result == 'insights' && mounted) _tabController.animateTo(2);
+                  }),
                   // Refresh database button
                   IconButton(
                     icon: const Icon(Icons.refresh_rounded, color: AppTheme.textDark, size: 20),

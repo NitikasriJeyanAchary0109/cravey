@@ -4,8 +4,9 @@
 import 'package:dio/dio.dart';
 import 'api_client.dart';
 import '../models/models.dart';
+import '../repositories/notification_repository.dart';
 
-class NotificationApiService {
+class NotificationApiService implements NotificationRepository {
   final Dio _dio = ApiClient.instance.dio;
 
   Future<NotificationModel> send(NotificationModel notification) async {
@@ -27,6 +28,27 @@ class NotificationApiService {
   }
 
   /// GET /api/notifications/mine: the signed-in person's own notifications, newest first.
+  @override
+  Future<List<NotificationModel>> mine() => getMine();
+
+  @override
+  Future<void> markRead(int id) async {
+    await markAsRead(id);
+  }
+
+  /// PUT /api/notifications/mine/read-all
+  @override
+  Future<void> markAllRead() async {
+    try {
+      await _dio.put('/api/notifications/mine/read-all');
+    } on DioException catch (e) {
+      throw ApiException.fromDioException(e);
+    }
+  }
+
+  @override
+  Future<void> remove(int id) => delete(id);
+
   Future<List<NotificationModel>> getMine() async {
     try {
       final res = await _dio.get('/api/notifications/mine');

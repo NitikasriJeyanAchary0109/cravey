@@ -16,5 +16,8 @@ public interface NotificationService {
 
     Notification markAsRead(Integer id);
 
+    /** Marks every unread notification of one user as read; returns how many changed. */
+    int markAllAsRead(Integer userId);
+
     void deleteNotification(Integer id);
 }

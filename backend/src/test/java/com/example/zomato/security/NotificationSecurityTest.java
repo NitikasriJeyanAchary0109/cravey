@@ -124,6 +124,17 @@ class NotificationSecurityTest {
     }
 
     @Test
+    void readAllMarksOnlyMyOwn() throws Exception {
+        notification(a, "second for A", false, 3);
+        JsonNode r = json.readTree(mvc.perform(as(put("/api/notifications/mine/read-all"), A, "CUSTOMER")).andReturn().getResponse().getContentAsString());
+        assertEquals(2, r.get("marked").asInt());
+        assertTrue(notifications.findByUser_UserId(a.getUserId()).stream().allMatch(Notification::isRead));
+        assertTrue(notifications.findByUser_UserId(b.getUserId()).stream().noneMatch(Notification::isRead), "B's are untouched");
+        assertEquals(0, json.readTree(mvc.perform(as(put("/api/notifications/mine/read-all"), A, "CUSTOMER")).andReturn().getResponse().getContentAsString()).get("marked").asInt());
+        assertEquals(401, code(put("/api/notifications/mine/read-all")));
+    }
+
+    @Test
     void anAdminCanSeeAnyone() throws Exception {
         assertEquals(200, code(as(get("/api/notifications/" + mineA.getId()), "admin@cravey.test", "ADMIN")));
         assertEquals(200, code(as(get("/api/notifications/user/" + a.getUserId()), "admin@cravey.test", "ADMIN")));

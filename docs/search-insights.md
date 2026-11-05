@@ -357,7 +357,8 @@ Searches already carried an optional lowercase city (`area`). The nightly job no
 ## Owner weekly digest
 
 One short in-app notification (type `WEEKLY_DIGEST`) per owner per 7 days: new suggestions waiting, what is rising near them (or everywhere), and orders search brought in over the last week. A week with nothing to say sends nothing; an owner with no user account (matched by email) is counted and skipped. The text is under 250 characters and only points to the Insights tab. Runs nightly after the suggestion job; `POST /admin/search/digest/generate` (admin) runs it now.
-Tests: backend `OwnerDigestIntegrationTest` (9).
+The app shows it: the restaurant dashboard has a bell with the number of unread notifications, which opens a Notifications screen (newest first, unread dot, "5 min ago", mark all read, swipe or the bin to delete). A digest has an **Open Insights** button that marks it read and switches the dashboard to the Insights tab. Notifications are the signed-in person's own (`/api/notifications/mine`, `/mine/unread`, `/mine/read-all`); the list is dropped when someone else signs in. Only the owner dashboard has the bell so far.
+Tests: backend `OwnerDigestIntegrationTest` (9) and `NotificationSecurityTest` (10); Flutter `notifications_test` (20).
 
 ## Drops reserved from search results
 

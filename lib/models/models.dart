@@ -797,15 +797,27 @@ class NotificationModel {
   final String message;
   final String? type;
   final bool isRead;
+  final DateTime? timestamp;
 
-  NotificationModel({this.id, required this.message, this.type, this.isRead = false});
+  NotificationModel({this.id, required this.message, this.type, this.isRead = false, this.timestamp});
 
   factory NotificationModel.fromJson(Map<String, dynamic> j) => NotificationModel(
         id: j['id'],
         message: j['message'] ?? '',
         type: j['type'],
-        isRead: j['isRead'] ?? false,
+        isRead: j['isRead'] ?? j['read'] ?? false,
+        timestamp: _parseTime(j['timestamp']),
       );
+
+  NotificationModel copyWith({bool? isRead}) =>
+      NotificationModel(id: id, message: message, type: type, isRead: isRead ?? this.isRead, timestamp: timestamp);
+
+  /// The server sends an ISO time, or milliseconds since 1970 in older responses.
+  static DateTime? _parseTime(dynamic v) {
+    if (v is num) return DateTime.fromMillisecondsSinceEpoch(v.toInt());
+    if (v is String) return DateTime.tryParse(v)?.toLocal();
+    return null;
+  }
 
   Map<String, dynamic> toJson() => {
         'message': message,

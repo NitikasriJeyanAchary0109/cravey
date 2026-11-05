@@ -41,6 +41,10 @@ import 'repositories/dish_search_repository.dart';
 import 'models/dish_search_state.dart';
 import 'services/insights_service.dart';
 import 'services/search_area.dart';
+import 'services/notification_service.dart';
+import 'repositories/notification_repository.dart';
+import 'models/notifications_state.dart';
+import 'screens/notifications_screen.dart';
 import 'services/demand_gap_service.dart';
 import 'repositories/demand_gap_repository.dart';
 import 'services/search_privacy.dart';
@@ -89,8 +93,12 @@ void main() async {
         Provider<TrendingRepository>(create: (_) => InsightsService()),
         Provider<OwnerInsightsRepository>(create: (_) => InsightsService()),
         Provider<DemandGapRepository>(create: (_) => DemandGapService()),
+        Provider<NotificationRepository>(create: (_) => NotificationApiService()),
         ChangeNotifierProvider.value(value: session),
         ChangeNotifierProvider(create: (_) => CartState()),
+        ChangeNotifierProvider(
+          create: (ctx) => NotificationsState(repository: ctx.read<NotificationRepository>(), identity: () => session.user?.email),
+        ),
         ChangeNotifierProvider(
           create: (ctx) => DishSearchState(repository: ctx.read<DishSearchRepository>()),
         ),
@@ -140,6 +148,7 @@ class MyApp extends StatelessWidget {
         '/delivery-dashboard': (context) => const DeliveryDashboardScreen(),
         '/admin-dashboard': (context) => const AdminDashboardScreen(),
         '/orders-history': (context) => const OrderHistoryScreen(),
+        '/notifications': (context) => const NotificationsScreen(),
         '/drop': (context) => const DropDetailScreen(),
         '/drop-checkout': (context) => const DropCheckoutScreen(),
       },
