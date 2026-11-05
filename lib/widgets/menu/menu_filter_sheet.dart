@@ -72,7 +72,6 @@ class _MenuFilterSheetState extends State<MenuFilterSheet> {
         child: Text(
           label,
           style: TextStyle(
-            fontFamily: 'Poppins',
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
             color: isSelected ? AppTheme.primaryColor : AppTheme.textDark,
@@ -96,7 +95,6 @@ class _MenuFilterSheetState extends State<MenuFilterSheet> {
               const Text(
                 "Sort & Filter Menu",
                 style: TextStyle(
-                  fontFamily: 'Poppins',
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.textDark,
@@ -114,7 +112,6 @@ class _MenuFilterSheetState extends State<MenuFilterSheet> {
           const Text(
             "Sort By",
             style: TextStyle(
-              fontFamily: 'Poppins',
               fontSize: 14,
               fontWeight: FontWeight.bold,
               color: AppTheme.textDark,
@@ -153,7 +150,6 @@ class _MenuFilterSheetState extends State<MenuFilterSheet> {
           const Text(
             "Filter By",
             style: TextStyle(
-              fontFamily: 'Poppins',
               fontSize: 14,
               fontWeight: FontWeight.bold,
               color: AppTheme.textDark,
@@ -191,7 +187,6 @@ class _MenuFilterSheetState extends State<MenuFilterSheet> {
                 child: const Text(
                   "Apply Filters",
                   style: TextStyle(
-                    fontFamily: 'Poppins',
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 15,

@@ -9,6 +9,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'google_login_page.dart';
+import '../theme/app_theme.dart';
 
 Widget buildMobileWebView(BuildContext context, String loginUrl, String role) {
   return _WebPopupLoginPage(loginUrl: loginUrl, role: role);
@@ -187,14 +188,14 @@ class _WebPopupLoginPageState extends State<_WebPopupLoginPage> {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE95322).withOpacity(0.08),
+                  color: AppTheme.chipOrange.withOpacity(0.08),
                   shape: BoxShape.circle,
                 ),
                 child: const Center(
                   child: Text('G', style: TextStyle(
                     fontSize: 38,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFFE95322),
+                    color: AppTheme.chipOrange,
                   )),
                 ),
               ),
@@ -235,7 +236,7 @@ class _WebPopupLoginPageState extends State<_WebPopupLoginPage> {
                     style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFE95322),
+                    backgroundColor: AppTheme.chipOrange,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                         horizontal: 32, vertical: 16),
@@ -280,7 +281,7 @@ class _WebPopupLoginPageState extends State<_WebPopupLoginPage> {
                   height: 32,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.5,
-                    color: Color(0xFFE95322),
+                    color: AppTheme.chipOrange,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -297,8 +298,8 @@ class _WebPopupLoginPageState extends State<_WebPopupLoginPage> {
                   icon: const Icon(Icons.open_in_browser_rounded, size: 18),
                   label: const Text('Re-open Sign-In Popup'),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFFE95322),
-                    side: const BorderSide(color: Color(0xFFE95322)),
+                    foregroundColor: AppTheme.chipOrange,
+                    side: const BorderSide(color: AppTheme.chipOrange),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 12),
                     shape: RoundedRectangleBorder(

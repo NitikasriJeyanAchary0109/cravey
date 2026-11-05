@@ -241,7 +241,7 @@ class _RestaurantDashboardScreenState extends State<RestaurantDashboardScreen>
       // loaded up front so the tab can show how many suggestions are waiting
       create: (ctx) => OwnerInsightsState(repository: ctx.read<OwnerInsightsRepository>())..load(),
       child: Scaffold(
-      backgroundColor: const Color(0xFFF7F8FA),
+      backgroundColor: AppTheme.scaffoldBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -265,7 +265,7 @@ class _RestaurantDashboardScreenState extends State<RestaurantDashboardScreen>
                     height: 44,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFFE64A19), Color(0xFFFF7043)],
+                        colors: [AppTheme.chipOrange, AppTheme.chipOrange],
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -293,7 +293,7 @@ class _RestaurantDashboardScreenState extends State<RestaurantDashboardScreen>
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFE64A19).withValues(alpha: 0.1),
+                                color: AppTheme.chipOrange.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
                               ),
                               child: const Text(
@@ -301,7 +301,7 @@ class _RestaurantDashboardScreenState extends State<RestaurantDashboardScreen>
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFFE64A19),
+                                  color: AppTheme.chipOrange,
                                 ),
                               ),
                             ),
@@ -356,7 +356,7 @@ class _RestaurantDashboardScreenState extends State<RestaurantDashboardScreen>
                   // Store Toggle Switch
                   Switch.adaptive(
                     value: _isOpen,
-                    activeColor: const Color(0xFFE64A19),
+                    activeColor: AppTheme.chipOrange,
                     onChanged: _toggleStoreStatus,
                   ),
                 ],
@@ -368,8 +368,8 @@ class _RestaurantDashboardScreenState extends State<RestaurantDashboardScreen>
               color: Colors.white,
               child: TabBar(
                 controller: _tabController,
-                indicatorColor: const Color(0xFFE64A19),
-                labelColor: const Color(0xFFE64A19),
+                indicatorColor: AppTheme.chipOrange,
+                labelColor: AppTheme.chipOrange,
                 unselectedLabelColor: Colors.grey.shade600,
                 indicatorWeight: 3,
                 tabs: [
@@ -390,7 +390,7 @@ class _RestaurantDashboardScreenState extends State<RestaurantDashboardScreen>
             // Tab Views
             Expanded(
               child: _loading
-                  ? const Center(child: CircularProgressIndicator(color: Color(0xFFE64A19)))
+                  ? const Center(child: CircularProgressIndicator(color: AppTheme.chipOrange))
                   : TabBarView(
                       controller: _tabController,
                       children: [
@@ -506,7 +506,7 @@ class _RestaurantDashboardScreenState extends State<RestaurantDashboardScreen>
                   const Text("Status Synced with PostgreSQL", style: TextStyle(fontSize: 12, color: Colors.grey)),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFE64A19),
+                      backgroundColor: AppTheme.chipOrange,
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     ),
                     onPressed: () async {
@@ -532,7 +532,7 @@ class _RestaurantDashboardScreenState extends State<RestaurantDashboardScreen>
     return Scaffold(
       backgroundColor: Colors.transparent,
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFFE64A19),
+        backgroundColor: AppTheme.chipOrange,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text("Add Dish to DB", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         onPressed: _showAddMenuItemDialog,
@@ -612,7 +612,7 @@ class _RestaurantDashboardScreenState extends State<RestaurantDashboardScreen>
                               "₹${item.price.toStringAsFixed(0)}",
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFFE64A19),
+                                color: AppTheme.chipOrange,
                                 fontSize: 14,
                               ),
                             ),

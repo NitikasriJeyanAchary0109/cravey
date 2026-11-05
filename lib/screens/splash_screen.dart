@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../services/session_provider.dart';
+import '../widgets/sunset_backdrop.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -56,8 +57,12 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
+      backgroundColor: AppTheme.scaffoldBackground,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          const SunsetBackdrop(horizon: 0.68),
+          Center(
         child: AnimatedBuilder(
           animation: _controller,
           builder: (context, child) {
@@ -73,43 +78,38 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       height: 110,
                       width: 110,
                       decoration: BoxDecoration(
-                        gradient: AppTheme.primaryGradient,
+                        color: AppTheme.cardBackground,
                         borderRadius: BorderRadius.circular(30),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.primaryColor.withOpacity(0.35),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
+                        border: Border.all(color: AppTheme.primaryDark, width: 3),
+                        boxShadow: const [
+                          BoxShadow(color: AppTheme.primaryDark, offset: Offset(0, 6)),
                         ],
                       ),
                       child: const Icon(
                         Icons.restaurant_rounded,
                         size: 55,
-                        color: Colors.white,
+                        color: AppTheme.primaryColor,
                       ),
                     ),
                     const SizedBox(height: 24),
-                    // Wordmark
-                    ShaderMask(
-                      shaderCallback: (bounds) => AppTheme.primaryGradient.createShader(bounds),
-                      child: Text(
-                        "Cravey",
-                        style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 1.2,
-                            ),
-                      ),
+                    // Wordmark: cream letters with a brick shadow, like a postcard
+                    Text(
+                      "Cravey",
+                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
+                            color: const Color(0xFFFFF6D4),
+                            fontSize: 54,
+                            letterSpacing: 1.5,
+                            shadows: const [Shadow(color: AppTheme.primaryDark, offset: Offset(3, 4))],
+                          ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       "Satisfy Your Desires",
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.grey.shade500,
-                            letterSpacing: 2,
+                            color: Colors.white,
+                            letterSpacing: 3,
                             fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w800,
                           ),
                     ),
                   ],
@@ -118,6 +118,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             );
           },
         ),
+      ),
+        ],
       ),
     );
   }

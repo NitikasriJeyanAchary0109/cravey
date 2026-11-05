@@ -43,14 +43,14 @@ class _RoleSwitcherContent extends StatelessWidget {
         'title': 'Customer',
         'subtitle': 'Order food & live order tracking',
         'icon': Icons.restaurant_rounded,
-        'color': const Color(0xFFF25C05),
+        'color': AppTheme.chipOrange,
       },
       {
         'key': 'OWNER',
         'title': 'Restaurant Partner',
         'subtitle': 'Live kitchen, menu & orders',
         'icon': Icons.storefront_rounded,
-        'color': const Color(0xFFE64A19),
+        'color': AppTheme.chipOrange,
       },
       {
         'key': 'DELIVERY',

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/scale_tap.dart';
+import '../widgets/sunset_backdrop.dart';
 import '../services/session_provider.dart';
 
 class RoleItem {
@@ -44,7 +45,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       badge: 'Food Lover',
       description: 'Explore curated local restaurants, customize meals, and track doorstep deliveries in real-time.',
       icon: Icons.restaurant_rounded,
-      primaryColor: Color(0xFFF25C05),
+      primaryColor: AppTheme.chipOrange,
       secondaryColor: Color(0xFFFFA000),
       highlights: ['Live Order Tracking', 'Seamless Checkout', 'Exclusive Offers'],
     ),
@@ -54,8 +55,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       badge: 'Merchant',
       description: 'Accept live orders, manage kitchen prep times, customize digital menus, and monitor daily revenue.',
       icon: Icons.storefront_rounded,
-      primaryColor: Color(0xFFE64A19),
-      secondaryColor: Color(0xFFFF7043),
+      primaryColor: AppTheme.chipOrange,
+      secondaryColor: AppTheme.chipOrange,
       highlights: ['Live Kitchen Queue', 'Menu & Pricing Control', 'Order History & Status'],
     ),
     RoleItem(
@@ -98,44 +99,11 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F9FB),
+      backgroundColor: AppTheme.scaffoldBackground,
       body: Stack(
         children: [
-          // Background soft ambient gradient blob
-          Positioned(
-            top: -120,
-            right: -80,
-            child: Container(
-              width: 320,
-              height: 320,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppTheme.primaryColor.withValues(alpha: 0.18),
-                    AppTheme.primaryColor.withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -80,
-            left: -80,
-            child: Container(
-              width: 260,
-              height: 260,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    const Color(0xFFFFD54F).withValues(alpha: 0.20),
-                    const Color(0xFFFFD54F).withValues(alpha: 0.0),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          // quiet rolling hills along the bottom
+          const Positioned.fill(child: SunsetBackdrop(style: SunsetStyle.hills, opacity: 0.4)),
 
           SafeArea(
             child: Column(
@@ -166,12 +134,11 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             "Cravey Portals",
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w900,
-                              color: AppTheme.textDark,
+                            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontSize: 26,
+                              color: AppTheme.textBrown,
                               letterSpacing: 0.2,
                             ),
                           ),

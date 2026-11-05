@@ -35,7 +35,6 @@ class MenuSearchBar extends StatelessWidget {
           controller: controller,
           onChanged: onChanged,
           style: const TextStyle(
-            fontFamily: 'Poppins',
             fontSize: 13,
             color: AppTheme.textDark,
           ),

@@ -155,7 +155,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     return ChangeNotifierProvider(
       create: (ctx) => DemandGapState(repository: ctx.read<DemandGapRepository>())..load(),
       child: Scaffold(
-      backgroundColor: const Color(0xFFF7F8FA),
+      backgroundColor: AppTheme.scaffoldBackground,
       body: SafeArea(
         child: Column(
           children: [
@@ -316,7 +316,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
       children: [
         Row(
           children: [
-            _buildKPICard("DB Restaurants", "${_restaurants.length} stores", Icons.storefront_rounded, const Color(0xFFE64A19)),
+            _buildKPICard("DB Restaurants", "${_restaurants.length} stores", Icons.storefront_rounded, AppTheme.chipOrange),
             const SizedBox(width: 12),
             _buildKPICard("DB Riders", "${_partners.length} fleet", Icons.two_wheeler_rounded, const Color(0xFF00897B)),
           ],
@@ -410,10 +410,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE64A19).withValues(alpha: 0.1),
+                  color: AppTheme.chipOrange.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.storefront_rounded, color: Color(0xFFE64A19)),
+                child: const Icon(Icons.storefront_rounded, color: AppTheme.chipOrange),
               ),
               const SizedBox(width: 14),
               Expanded(

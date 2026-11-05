@@ -345,7 +345,7 @@ class _DeliveryDashboardScreenState extends State<DeliveryDashboardScreen> {
                                     const SizedBox(height: 8),
                                     const Row(
                                       children: [
-                                        Icon(Icons.storefront_rounded, size: 16, color: Color(0xFFE64A19)),
+                                        Icon(Icons.storefront_rounded, size: 16, color: AppTheme.chipOrange),
                                         SizedBox(width: 8),
                                         Text("Pickup: Restaurant Hub", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                                       ],

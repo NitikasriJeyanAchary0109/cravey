@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/scale_tap.dart';
+import '../widgets/sunset_backdrop.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../services/session_provider.dart';
@@ -13,6 +14,8 @@ class LoginScreen extends StatefulWidget {
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
+
+const Color _cream = Color(0xFFFFF6D4);
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
@@ -216,19 +219,8 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background - Wavy Liquid Background matching the screenshot
-          Container(
-            decoration: const BoxDecoration(
-              gradient: AppTheme.orangeGradient,
-            ),
-          ),
-          
-          // Painted waves to match the fluid wavy visuals
-          Positioned.fill(
-            child: CustomPaint(
-              painter: WaveBackgroundPainter(),
-            ),
-          ),
+          // the sunset landscape behind the form
+          const Positioned.fill(child: SunsetBackdrop(horizon: 0.6)),
 
           // Core content
           SafeArea(
@@ -312,11 +304,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Welcome heading
                     Text(
                       _roleTitle,
-                      style: const TextStyle(
-                        color: AppTheme.textDark,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.5,
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        color: _cream,
+                        fontSize: 34,
+                        letterSpacing: 0.8,
+                        shadows: const [Shadow(color: AppTheme.primaryDark, offset: Offset(2, 3))],
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -325,11 +317,12 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       _roleSubtitle,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppTheme.textDark.withValues(alpha: 0.7),
+                      style: const TextStyle(
+                        color: Colors.white,
                         fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         height: 1.4,
+                        shadows: [Shadow(color: Color(0x66000000), blurRadius: 6)],
                       ),
                     ),
                     const SizedBox(height: 32),
@@ -435,7 +428,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text(
                         "Forgot password?",
                         style: TextStyle(
-                          color: AppTheme.primaryColor,
+                          color: _cream,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
@@ -446,19 +439,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Divider
                     Row(
                       children: [
-                        Expanded(child: Divider(color: Colors.grey.shade400, thickness: 1)),
+                        Expanded(child: Divider(color: _cream.withValues(alpha: 0.6), thickness: 1)),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
                           child: Text(
                             "Or sign in with",
                             style: TextStyle(
-                              color: AppTheme.textDark.withOpacity(0.7),
+                              color: _cream,
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                        Expanded(child: Divider(color: Colors.grey.shade400, thickness: 1)),
+                        Expanded(child: Divider(color: _cream.withValues(alpha: 0.6), thickness: 1)),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -491,7 +484,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Text(
                           "Don't have an account? ",
                           style: TextStyle(
-                            color: AppTheme.textDark.withOpacity(0.8),
+                            color: _cream,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -502,7 +495,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: const Text(
                             "Sign Up",
                             style: TextStyle(
-                              color: AppTheme.primaryColor,
+                              color: Colors.white,
+                              decoration: TextDecoration.underline,
+                              decorationColor: Colors.white,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -519,36 +514,4 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-}
-
-// Background Wave Painter for Liquid Blobs
-class WaveBackgroundPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paintLight = Paint()..color = Colors.white.withOpacity(0.12);
-    final paintAccent = Paint()..color = const Color(0xFFFFD54F).withOpacity(0.18); // Yellow
-    
-    // Bottom Wave blob 1
-    final path1 = Path();
-    path1.moveTo(0, size.height * 0.7);
-    path1.quadraticBezierTo(size.width * 0.4, size.height * 0.6, size.width * 0.7, size.height * 0.82);
-    path1.quadraticBezierTo(size.width * 0.85, size.height * 0.9, size.width, size.height * 0.8);
-    path1.lineTo(size.width, size.height);
-    path1.lineTo(0, size.height);
-    path1.close();
-    canvas.drawPath(path1, paintAccent);
-
-    // Bottom Wave blob 2
-    final path2 = Path();
-    path2.moveTo(0, size.height * 0.78);
-    path2.quadraticBezierTo(size.width * 0.3, size.height * 0.85, size.width * 0.6, size.height * 0.75);
-    path2.quadraticBezierTo(size.width * 0.85, size.height * 0.68, size.width, size.height * 0.85);
-    path2.lineTo(size.width, size.height);
-    path2.lineTo(0, size.height);
-    path2.close();
-    canvas.drawPath(path2, paintLight);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

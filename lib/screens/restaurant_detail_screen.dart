@@ -223,7 +223,6 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                         child: Text(
                           "No items found matching the selected filters.",
                           style: TextStyle(
-                            fontFamily: 'Poppins',
                             color: Colors.grey.shade500,
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
@@ -344,7 +343,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                 ),
                 title: Text(
                   _isBookmarked ? "Remove Bookmark" : "Bookmark Restaurant",
-                  style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppTheme.textDark),
+                  style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textDark),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -355,7 +354,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                     SnackBar(
                       content: Text(
                         _isBookmarked ? "Restaurant added to Bookmarks!" : "Restaurant removed from Bookmarks!",
-                        style: const TextStyle(fontFamily: 'Poppins'),
+                        style: const TextStyle(),
                       ),
                       backgroundColor: AppTheme.primaryColor,
                       duration: const Duration(seconds: 2),
@@ -368,13 +367,13 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                 leading: const Icon(Icons.share_rounded, color: AppTheme.primaryColor),
                 title: const Text(
                   "Share Restaurant",
-                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppTheme.textDark),
+                  style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textDark),
                 ),
                 onTap: () {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text("Link copied to clipboard!", style: TextStyle(fontFamily: 'Poppins')),
+                      content: Text("Link copied to clipboard!", style: TextStyle()),
                       backgroundColor: AppTheme.primaryColor,
                       duration: Duration(seconds: 2),
                     ),
@@ -386,7 +385,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                 leading: const Icon(Icons.info_outline_rounded, color: AppTheme.primaryColor),
                 title: const Text(
                   "Restaurant Information",
-                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.w600, color: AppTheme.textDark),
+                  style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textDark),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -396,7 +395,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       title: Text(
                         restaurant.name,
-                        style: const TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       content: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -404,36 +403,36 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                         children: [
                           const Text(
                             "Address:",
-                            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 13),
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                           ),
                           Text(
                             "Express Avenue Mall, Coimbatore, Tamil Nadu 641002",
-                            style: TextStyle(fontFamily: 'Poppins', color: Colors.grey.shade700, fontSize: 12),
+                            style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
                           ),
                           const SizedBox(height: 12),
                           const Text(
                             "Timings:",
-                            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 13),
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                           ),
                           Text(
                             "11:00 AM - 11:00 PM (Daily)",
-                            style: TextStyle(fontFamily: 'Poppins', color: Colors.grey.shade700, fontSize: 12),
+                            style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
                           ),
                           const SizedBox(height: 12),
                           const Text(
                             "Contact:",
-                            style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold, fontSize: 13),
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                           ),
                           Text(
                             "+91 98765 43210",
-                            style: TextStyle(fontFamily: 'Poppins', color: Colors.grey.shade700, fontSize: 12),
+                            style: TextStyle(color: Colors.grey.shade700, fontSize: 12),
                           ),
                         ],
                       ),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.pop(context),
-                          child: const Text("Close", style: TextStyle(fontFamily: 'Poppins')),
+                          child: const Text("Close", style: TextStyle()),
                         ),
                       ],
                     ),

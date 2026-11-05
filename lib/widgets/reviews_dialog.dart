@@ -51,7 +51,6 @@ void showReviewsDialog(BuildContext context, Restaurant restaurant) {
                         const Text(
                           "User Reviews",
                           style: TextStyle(
-                            fontFamily: 'Poppins',
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: AppTheme.textDark,
@@ -61,7 +60,6 @@ void showReviewsDialog(BuildContext context, Restaurant restaurant) {
                         Text(
                           restaurant.name,
                           style: TextStyle(
-                            fontFamily: 'Poppins',
                             fontSize: 13,
                             color: Colors.grey.shade600,
                             fontWeight: FontWeight.w500,
@@ -88,7 +86,6 @@ void showReviewsDialog(BuildContext context, Restaurant restaurant) {
                         Text(
                           restaurant.rating.toStringAsFixed(1),
                           style: const TextStyle(
-                            fontFamily: 'Poppins',
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
                             color: AppTheme.primaryColor,
@@ -123,7 +120,6 @@ void showReviewsDialog(BuildContext context, Restaurant restaurant) {
                             Text(
                               review["name"],
                               style: const TextStyle(
-                                fontFamily: 'Poppins',
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                                 color: AppTheme.textDark,
@@ -132,7 +128,6 @@ void showReviewsDialog(BuildContext context, Restaurant restaurant) {
                             Text(
                               review["time"],
                               style: TextStyle(
-                                fontFamily: 'Poppins',
                                 fontSize: 11,
                                 color: Colors.grey.shade400,
                               ),
@@ -156,7 +151,6 @@ void showReviewsDialog(BuildContext context, Restaurant restaurant) {
                         Text(
                           review["comment"],
                           style: TextStyle(
-                            fontFamily: 'Poppins',
                             fontSize: 13,
                             color: Colors.grey.shade700,
                             height: 1.4,
@@ -184,7 +178,6 @@ void showReviewsDialog(BuildContext context, Restaurant restaurant) {
                     child: const Text(
                       "Close",
                       style: TextStyle(
-                        fontFamily: 'Poppins',
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
