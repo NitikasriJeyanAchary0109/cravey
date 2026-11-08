@@ -158,6 +158,12 @@ class RealModelSearchEvalTest {
         assertTrue(full.ndcg() >= 0.65, "regression floor with automatic tags: " + full.ndcg());
         Scores ownerFull = owner.get("full (hybrid + tags + coverage lift)").get("ALL");
         assertTrue(ownerFull.ndcg() >= 0.80 && ownerFull.mrr() >= 0.90, "regression floor with owner tags: " + ownerFull);
+        // composite cravings ("sweet and spicy but not too heavy"): the 0.90 MRR target holds once owners confirm tags;
+        // with automatic tags alone it is lower (0.86 when measured), so that case only has a regression floor
+        Scores ownerCombo = owner.get("full (hybrid + tags + coverage lift)").get("combo");
+        assertTrue(ownerCombo.mrr() >= 0.90, "composite cravings, owner tags, MRR target 0.90: " + ownerCombo);
+        Scores autoCombo = auto.get("full (hybrid + tags + coverage lift)").get("combo");
+        assertTrue(autoCombo.mrr() >= 0.80, "composite cravings, automatic tags, regression floor: " + autoCombo);
     }
 
     /**

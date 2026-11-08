@@ -2,32 +2,32 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Brand colors. The palette follows the Meatopia site (visitmeatopia.com): warm cream paper, rust and brick reds, a golden sun.
-  static const Color primaryColor = Color(0xFFC04C2E); // rust: buttons, links, icons
-  static const Color primaryDark = Color(0xFF9A3D25); // brick
-  static const Color primaryLight = Color(0xFFF2A07F); // light terracotta, for tints
+  // Brand colors. A quiet warm-white canvas so the saturated food photos carry the colour, and one tomato-red action colour.
+  // Contrast (WCAG): white on primary 5.0:1, text on canvas 16:1, secondary text on canvas 5.6:1.
+  static const Color primaryColor = Color(0xFFC8401C); // tomato: buttons, links, active states
+  static const Color primaryDark = Color(0xFFA33316);
+  static const Color primaryLight = Color(0xFFF4CDBF); // light tint of the action colour
 
-  static const Color accentColor = Color(0xFFF6C453); // sun yellow
-  static const Color scaffoldBackground = Color(0xFFFEF2DF); // cream paper
-  static const Color cardBackground = Color(0xFFFFFDF6); // off-white card
+  static const Color accentColor = Color(0xFFF2A33A); // amber: deals and stars
+  static const Color scaffoldBackground = Color(0xFFFAF7F2); // warm white canvas
+  static const Color cardBackground = Colors.white;
 
-  // headings are deep warm brown, chips and badges the site's orange-red
-  static const Color textBrown = Color(0xFF4A2C1D);
-  static const Color chipOrange = Color(0xFFE75B37);
-  static const Color freshGreen = Color(0xFF8CC63E); // also marks vegetarian dishes, so it stays a clear green
-  static const Color textDark = Color(0xFF2B1D14); // warm charcoal
-  static const Color textLight = Color(0xFF7A6657);
-  static const Color textLightest = Color(0xFFA39384);
+  static const Color textBrown = Color(0xFF1F1A17); // headings (kept under its old name)
+  static const Color chipOrange = Color(0xFFC8401C); // badges and highlights: the same tomato, so there is one accent
+  static const Color freshGreen = Color(0xFF2E7D32); // vegetarian and success
+  static const Color textDark = Color(0xFF1F1A17);
+  static const Color textLight = Color(0xFF6B625B);
+  static const Color textLightest = Color(0xFF70675F);
 
-  static const Color dividerColor = Color(0xFFEAD9BE);
-  static const Color disabledColor = Color(0xFFEAD9BE);
-  static const Color border = Color(0xFFE9D5B5); // card and input outlines
+  static const Color dividerColor = Color(0xFFE7DFD3);
+  static const Color disabledColor = Color(0xFFE7DFD3);
+  static const Color border = Color(0xFFE7DFD3); // card and input outlines
 
-  // Gradients
+  // Gradients: kept for the few icon tiles that use them, but nearly flat
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [
-      Color(0xFFE75B37), // sunset red-orange
-      Color(0xFFF29A3C), // golden orange
+      Color(0xFFC8401C),
+      Color(0xFFD9542B),
     ],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -35,8 +35,8 @@ class AppTheme {
 
   static const LinearGradient orangeGradient = LinearGradient(
     colors: [
-      Color(0xFFF6A04D), // sunset glow
-      Color(0xFFC84B2B), // rust
+      Color(0xFFD9542B),
+      Color(0xFFC8401C),
     ],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
@@ -56,30 +56,30 @@ class AppTheme {
       
       // Typography
       textTheme: GoogleFonts.nunitoSansTextTheme().copyWith(
-        displayLarge: GoogleFonts.lilitaOne(
-          fontWeight: FontWeight.w400,
+        displayLarge: GoogleFonts.nunitoSans(
+          fontWeight: FontWeight.w800,
           color: textDark,
         ),
-        displayMedium: GoogleFonts.lilitaOne(
-          fontWeight: FontWeight.w400,
+        displayMedium: GoogleFonts.nunitoSans(
+          fontWeight: FontWeight.w800,
           color: textDark,
         ),
-        displaySmall: GoogleFonts.lilitaOne(
-          fontWeight: FontWeight.w400,
+        displaySmall: GoogleFonts.nunitoSans(
+          fontWeight: FontWeight.w800,
           color: textDark,
         ),
-        headlineLarge: GoogleFonts.lilitaOne(
-          fontWeight: FontWeight.w400,
+        headlineLarge: GoogleFonts.nunitoSans(
+          fontWeight: FontWeight.w800,
           fontSize: 28,
           color: textDark,
         ),
-        headlineMedium: GoogleFonts.lilitaOne(
-          fontWeight: FontWeight.w400,
+        headlineMedium: GoogleFonts.nunitoSans(
+          fontWeight: FontWeight.w800,
           fontSize: 26,
           color: textDark,
         ),
-        headlineSmall: GoogleFonts.lilitaOne(
-          fontWeight: FontWeight.w400,
+        headlineSmall: GoogleFonts.nunitoSans(
+          fontWeight: FontWeight.w800,
           fontSize: 24,
           color: textDark,
         ),
@@ -168,14 +168,14 @@ class AppTheme {
       // Input Fields (TextFormField)
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: cardBackground,
+        fillColor: Colors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: border, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: border, width: 1),
         ),
         focusedBorder: OutlineInputBorder(

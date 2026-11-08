@@ -6,7 +6,6 @@ import '../models/cart_state.dart';
 import '../models/models.dart' as api;
 import '../theme/app_theme.dart';
 import '../widgets/food_card.dart';
-import '../widgets/citrus_header.dart';
 import '../widgets/scale_tap.dart';
 import '../widgets/fade_in_wrapper.dart';
 import '../widgets/shimmer_placeholder.dart';
@@ -24,6 +23,10 @@ import '../widgets/search/restaurant_results_section.dart';
 import '../widgets/search/search_privacy_widgets.dart';
 import '../widgets/drops/drops_section.dart';
 import '../widgets/drops/hold_banner.dart';
+import '../widgets/home_header.dart';
+import '../widgets/order_again_row.dart';
+import '../widgets/cart_bar.dart';
+import '../models/order_again_state.dart';
 
 String _restaurantImage(int? id, String name) {
   final n = name.toLowerCase();
@@ -136,6 +139,10 @@ class _HomeScreenState extends State<HomeScreen> {
       _searchQuery = lastQuery;
     }
     _loadRestaurants(reset: true);
+    // what this customer ordered before, for the Order again row
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<OrderAgainState>().load();
+    });
     // Live drops, the caller's slot hold and waitlist position stay fresh while the home screen is open.
     _dropState = context.read<DropState>()..retainPolling();
   }
@@ -342,32 +349,23 @@ class _HomeScreenState extends State<HomeScreen> {
         controller: _scrollController,
         child: Column(
           children: [
-            CitrusHeader(
-              height: 140,
-              title: "Cravey",
-              showBackButton: false,
+            HomeHeader(
+              name: context.watch<SessionProvider>().user?.name,
               trailing: ScaleTap(
                 onTap: () => RoleSwitcherDialog.show(context),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.25),
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.4)),
+                    border: Border.all(color: AppTheme.border),
                   ),
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.swap_horiz_rounded, color: Colors.white, size: 16),
+                      Icon(Icons.swap_horiz_rounded, color: AppTheme.textDark, size: 16),
                       SizedBox(width: 4),
-                      Text(
-                        "Role",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
+                      Text("Role", style: TextStyle(color: AppTheme.textDark, fontWeight: FontWeight.w700, fontSize: 12)),
                     ],
                   ),
                 ),
@@ -445,14 +443,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       margin: const EdgeInsets.only(bottom: 20),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(28),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.06),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppTheme.border),
                       ),
                       child: TextField(
                         controller: _searchController,
@@ -463,7 +455,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           fontWeight: FontWeight.normal,
                         ),
                         decoration: InputDecoration(
-                          hintText: "Search dishes, or describe a craving...",
+                          hintText: "Describe a craving, or search dishes",
                           prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
                           suffixIcon: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -491,20 +483,22 @@ class _HomeScreenState extends State<HomeScreen> {
                           contentPadding:
                               const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(28),
+                            borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide.none,
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(28),
+                            borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide.none,
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(28),
+                            borderRadius: BorderRadius.circular(16),
                             borderSide: BorderSide.none,
                           ),
                         ),
                       ),
                     ),
+                    // The dishes this customer ordered before, one tap each
+                    const OrderAgainRow(),
                     // Rising searches someone can order today; tapping one runs it
                     TrendingChips(onPick: _pickTrending),
                     // Dishes, Restaurants or Cravings: narrows what the search looks at
@@ -799,7 +793,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CartBar(onOpen: () => Navigator.of(context).pushNamed('/cart')),
+          BottomNavigationBar(
         currentIndex: _navBarIndex,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppTheme.primaryColor,
@@ -864,6 +862,8 @@ class _HomeScreenState extends State<HomeScreen> {
             activeIcon: Icon(Icons.person_rounded),
             label: "Profile",
           ),
+        ],
+      ),
         ],
       ),
     );

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/scale_tap.dart';
-import '../widgets/sunset_backdrop.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../services/session_provider.dart';
@@ -14,8 +13,6 @@ class LoginScreen extends StatefulWidget {
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
-
-const Color _cream = Color(0xFFFFF6D4);
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
@@ -217,11 +214,9 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppTheme.scaffoldBackground,
       body: Stack(
         children: [
-          // the sunset landscape behind the form
-          const Positioned.fill(child: SunsetBackdrop(horizon: 0.6)),
-
           // Core content
           SafeArea(
             child: SingleChildScrollView(
@@ -243,13 +238,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.06),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                            border: Border.all(color: AppTheme.border),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -292,11 +281,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF37A20).withValues(alpha: 0.25),
+                          color: AppTheme.primaryColor,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
                         ),
-                        child: Icon(_roleIcon, color: AppTheme.textDark, size: 40),
+                        child: Icon(_roleIcon, color: Colors.white, size: 36),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -305,10 +293,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       _roleTitle,
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: _cream,
-                        fontSize: 34,
-                        letterSpacing: 0.8,
-                        shadows: const [Shadow(color: AppTheme.primaryDark, offset: Offset(2, 3))],
+                        color: AppTheme.textDark,
+                        fontSize: 28,
+                        letterSpacing: -0.3,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -318,11 +305,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       _roleSubtitle,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppTheme.textLight,
                         fontSize: 14,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w500,
                         height: 1.4,
-                        shadows: [Shadow(color: Color(0x66000000), blurRadius: 6)],
                       ),
                     ),
                     const SizedBox(height: 32),
@@ -330,7 +316,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Email Input Field (White card with shadow)
                     Container(
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(28),
+                        borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.04),
@@ -358,7 +344,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Password Input Field
                     Container(
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(28),
+                        borderRadius: BorderRadius.circular(14),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.04),
@@ -428,7 +414,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text(
                         "Forgot password?",
                         style: TextStyle(
-                          color: _cream,
+                          color: AppTheme.primaryColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
@@ -439,19 +425,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Divider
                     Row(
                       children: [
-                        Expanded(child: Divider(color: _cream.withValues(alpha: 0.6), thickness: 1)),
+                        Expanded(child: Divider(color: AppTheme.border, thickness: 1)),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
                           child: Text(
                             "Or sign in with",
                             style: TextStyle(
-                              color: _cream,
+                              color: AppTheme.textLight,
                               fontSize: 13,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                        Expanded(child: Divider(color: _cream.withValues(alpha: 0.6), thickness: 1)),
+                        Expanded(child: Divider(color: AppTheme.border, thickness: 1)),
                       ],
                     ),
                     const SizedBox(height: 24),
@@ -484,7 +470,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Text(
                           "Don't have an account? ",
                           style: TextStyle(
-                            color: _cream,
+                            color: AppTheme.textLight,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -495,9 +481,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: const Text(
                             "Sign Up",
                             style: TextStyle(
-                              color: Colors.white,
-                              decoration: TextDecoration.underline,
-                              decorationColor: Colors.white,
+                              color: AppTheme.primaryColor,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

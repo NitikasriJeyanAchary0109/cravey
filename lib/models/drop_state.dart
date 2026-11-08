@@ -192,7 +192,8 @@ class DropState extends ChangeNotifier {
     _pollers++;
     if (_timer == null) {
       _timer = Timer.periodic(_pollInterval, (_) => refresh());
-      refresh(showSpinner: true);
+      // Screens call this from initState, and refresh notifies before its first await: doing that mid-build is an error.
+      scheduleMicrotask(() => refresh(showSpinner: true));
     }
   }
 

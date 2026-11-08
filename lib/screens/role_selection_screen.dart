@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/scale_tap.dart';
-import '../widgets/sunset_backdrop.dart';
 import '../services/session_provider.dart';
 
 class RoleItem {
@@ -102,9 +101,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       backgroundColor: AppTheme.scaffoldBackground,
       body: Stack(
         children: [
-          // quiet rolling hills along the bottom
-          const Positioned.fill(child: SunsetBackdrop(style: SunsetStyle.hills, opacity: 0.4)),
-
           SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

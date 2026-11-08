@@ -54,9 +54,9 @@ class _TrendingChipsState extends State<TrendingChips> {
                 final c = chips[i];
                 return ActionChip(
                   key: ValueKey('trending-chip-${c.label}'),
-                  label: Text(c.label, style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.chipOrange)),
-                  backgroundColor: AppTheme.chipOrange.withOpacity(0.08),
-                  side: BorderSide(color: AppTheme.chipOrange.withOpacity(0.35)),
+                  label: Text(c.label, style: const TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textDark)),
+                  backgroundColor: Colors.white,
+                  side: const BorderSide(color: AppTheme.border),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   onPressed: () => widget.onPick(c.query),
                 );

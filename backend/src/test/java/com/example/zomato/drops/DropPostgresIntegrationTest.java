@@ -227,6 +227,72 @@ public class DropPostgresIntegrationTest {
     }
 
     @Test
+    void testPostgres_500ConcurrentUsersContestTheLastThreeSlots_exactlyThreeWin_neverOversold() throws Exception {
+        int totalSlots = 20, alreadyTaken = 17, contenders = 500;
+        Drop drop = transactionTemplate.execute(status -> {
+            Drop d = new Drop();
+            d.setTitle("Postgres 500-User Race Drop");
+            d.setPrice(75.0);
+            d.setTotalSlots(totalSlots);
+            d.setReservedSlots(0);
+            d.setRestaurantId(restaurant.getId());
+            d.setStartsAt(LocalDateTime.now().minusMinutes(1));
+            d.setEndsAt(LocalDateTime.now().plusHours(1));
+            return dropRepository.save(d);
+        });
+
+        for (int i = 0; i < alreadyTaken + contenders; i++) {
+            String email = "pg_mass_user_" + i + "@cravey.com";
+            transactionTemplate.execute(status -> { ensureCustomerUser(email); return null; });
+        }
+        for (int i = 0; i < alreadyTaken; i++) {
+            dropService.reserve(drop.getId(), "pg_mass_user_" + i + "@cravey.com");
+        }
+        assertSlotInvariant(drop.getId());
+        assertEquals(alreadyTaken, dropRepository.findById(drop.getId()).orElseThrow().getReservedSlots());
+
+        // one thread per contender, all released at the same instant
+        ExecutorService pool = Executors.newFixedThreadPool(contenders);
+        CountDownLatch ready = new CountDownLatch(contenders);
+        CountDownLatch go = new CountDownLatch(1);
+        AtomicInteger won = new AtomicInteger();
+        AtomicInteger soldOut = new AtomicInteger();
+        ConcurrentLinkedQueue<String> unexpected = new ConcurrentLinkedQueue<>();
+
+        for (int i = 0; i < contenders; i++) {
+            final String email = "pg_mass_user_" + (alreadyTaken + i) + "@cravey.com";
+            pool.submit(() -> {
+                ready.countDown();
+                try {
+                    go.await();
+                    ReservationResponseDTO res = dropService.reserve(drop.getId(), email);
+                    if (res != null && "HELD".equalsIgnoreCase(res.status())) won.incrementAndGet();
+                    else unexpected.add("no hold and no error for " + email);
+                } catch (DropApiException ex) {
+                    if ("SOLD_OUT".equals(ex.getCode())) soldOut.incrementAndGet();
+                    else unexpected.add(ex.getCode());
+                } catch (Exception ex) {
+                    unexpected.add(ex.getClass().getSimpleName() + ": " + ex.getMessage());
+                }
+            });
+        }
+
+        assertTrue(ready.await(30, TimeUnit.SECONDS), "all 500 threads must be waiting at the gate");
+        go.countDown();
+        pool.shutdown();
+        assertTrue(pool.awaitTermination(120, TimeUnit.SECONDS), "500 contenders must all finish");
+
+        assertTrue(unexpected.isEmpty(), "every contender either wins or is told SOLD_OUT: " + unexpected);
+        assertEquals(totalSlots - alreadyTaken, won.get(), "exactly the three remaining slots are won");
+        assertEquals(contenders - (totalSlots - alreadyTaken), soldOut.get(), "everyone else is told SOLD_OUT");
+
+        Drop after = dropRepository.findById(drop.getId()).orElseThrow();
+        assertEquals(totalSlots, after.getReservedSlots(), "Zero-Oversell: reservedSlots never exceeds totalSlots");
+        assertEquals(totalSlots, reservationRepository.countByDrop_IdAndStatus(drop.getId(), ReservationStatus.HELD));
+        assertSlotInvariant(drop.getId());
+    }
+
+    @Test
     void testPostgres_twoTrulyConcurrentDeliveriesOfSameWebhookEvent_both200_exactlyOneProcessedRecord() throws Exception {
         Drop drop = transactionTemplate.execute(status -> {
             Drop d = new Drop();
@@ -284,6 +350,55 @@ public class DropPostgresIntegrationTest {
 
         DropReservation updatedRes = reservationRepository.findById(res.reservationId()).orElseThrow();
         assertEquals(ReservationStatus.CONFIRMED, updatedRes.getStatus());
+        assertSlotInvariant(drop.getId());
+    }
+
+    @Test
+    void testPostgres_burstOf25DuplicateWebhookDeliveries_allReturn200_andTheOrderIsSettledOnce() throws Exception {
+        Drop drop = transactionTemplate.execute(status -> {
+            Drop d = new Drop();
+            d.setTitle("Postgres Webhook Burst Drop");
+            d.setPrice(50.0);
+            d.setTotalSlots(5);
+            d.setReservedSlots(0);
+            d.setRestaurantId(restaurant.getId());
+            d.setStartsAt(LocalDateTime.now().minusMinutes(5));
+            d.setEndsAt(LocalDateTime.now().plusHours(1));
+            return dropRepository.save(d);
+        });
+        String userEmail = "pg_webhook_burst_buyer@cravey.com";
+        transactionTemplate.execute(status -> { ensureCustomerUser(userEmail); return null; });
+        ReservationResponseDTO res = dropService.reserve(drop.getId(), userEmail);
+        OrderResponseDTO order = orderService.checkoutDropDto(userEmail, res.reservationId());
+
+        String eventId = "evt_pg_burst_123";
+        String payload = createWebhookPayload(eventId, "payment_intent.succeeded", order.getOrderId(), 50.0, "pi_pg_burst");
+        String sig = buildSigHeader(payload);
+        long paymentsBefore = paymentRepository.count();
+
+        int deliveries = 25;
+        CyclicBarrier barrier = new CyclicBarrier(deliveries);
+        ExecutorService executor = Executors.newFixedThreadPool(deliveries);
+        List<Future<Integer>> results = new java.util.ArrayList<>();
+        for (int i = 0; i < deliveries; i++) {
+            results.add(executor.submit(() -> {
+                barrier.await(10, TimeUnit.SECONDS);
+                return mockMvc.perform(post("/payment/webhook")
+                                .header("Stripe-Signature", sig)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(payload))
+                        .andReturn().getResponse().getStatus();
+            }));
+        }
+        for (Future<Integer> f : results) assertEquals(200, f.get(30, TimeUnit.SECONDS), "a duplicate delivery is acknowledged, never an error");
+        executor.shutdown();
+
+        assertEquals(1, processedWebhookEventRepository.count(), "one processed-event record for the one Stripe event");
+        assertEquals(PaymentStatus.PAID, orderRepository.findById(order.getOrderId()).orElseThrow().getPaymentStatus());
+        assertEquals(ReservationStatus.CONFIRMED, reservationRepository.findById(res.reservationId()).orElseThrow().getStatus());
+        assertEquals(1, dropRepository.findById(drop.getId()).orElseThrow().getReservedSlots(), "the slot is not counted twice");
+        assertEquals(paymentsBefore + 1, paymentRepository.count(), "one payment row from the first delivery, none from the 24 replays");
+        assertEquals(1, paymentRepository.findByTransactionId("pi_pg_burst").stream().count());
         assertSlotInvariant(drop.getId());
     }
 

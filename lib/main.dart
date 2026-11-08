@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:provider/single_child_widget.dart';
 import 'models/cart_state.dart';
 import 'services/session_provider.dart';
 import 'screens/splash_screen.dart';
@@ -44,6 +45,7 @@ import 'services/search_area.dart';
 import 'services/notification_service.dart';
 import 'repositories/notification_repository.dart';
 import 'models/notifications_state.dart';
+import 'models/order_again_state.dart';
 import 'screens/notifications_screen.dart';
 import 'services/demand_gap_service.dart';
 import 'repositories/demand_gap_repository.dart';
@@ -82,45 +84,52 @@ void main() async {
 
   runApp(
     MultiProvider(
-      providers: [
-        Provider<RestaurantRepository>(create: (_) => RestaurantService()),
-        Provider<CartRepository>(create: (_) => CartService()),
-        Provider<OrderRepository>(create: (_) => OrderService()),
-        Provider<PaymentRepository>(create: (_) => PaymentService()),
-        Provider<DropRepository>(create: (_) => DropService()),
-        Provider<DishSearchRepository>(create: (_) => DishSearchService()),
-        Provider<MenuTagRepository>(create: (_) => DishSearchService()),
-        Provider<TrendingRepository>(create: (_) => InsightsService()),
-        Provider<OwnerInsightsRepository>(create: (_) => InsightsService()),
-        Provider<DemandGapRepository>(create: (_) => DemandGapService()),
-        Provider<NotificationRepository>(create: (_) => NotificationApiService()),
-        ChangeNotifierProvider.value(value: session),
-        ChangeNotifierProvider(create: (_) => CartState()),
-        ChangeNotifierProvider(
-          create: (ctx) => NotificationsState(repository: ctx.read<NotificationRepository>(), identity: () => session.user?.email),
-        ),
-        ChangeNotifierProvider(
-          create: (ctx) => DishSearchState(repository: ctx.read<DishSearchRepository>()),
-        ),
-        ChangeNotifierProvider(
-          create: (ctx) => TrendingState(repository: ctx.read<TrendingRepository>()),
-        ),
-        ChangeNotifierProvider(
-          create: (ctx) => DropState(
-            repository: ctx.read<DropRepository>(),
-            isLoggedIn: () => session.isLoggedIn,
-          ),
-        ),
-        ChangeNotifierProvider(
-          create: (ctx) => CheckoutController(
-            paymentRepository: ctx.read<PaymentRepository>(),
-          ),
-        ),
-      ],
+      providers: appProviders(session),
       child: const MyApp(),
     ),
   );
 }
+
+/// Every provider the app runs with. [main] and the whole-app widget tests both build the tree from this list,
+/// so a test mounts the same wiring the app does.
+List<SingleChildWidget> appProviders(SessionProvider session) => [
+  Provider<RestaurantRepository>(create: (_) => RestaurantService()),
+  Provider<CartRepository>(create: (_) => CartService()),
+  Provider<OrderRepository>(create: (_) => OrderService()),
+  Provider<PaymentRepository>(create: (_) => PaymentService()),
+  Provider<DropRepository>(create: (_) => DropService()),
+  Provider<DishSearchRepository>(create: (_) => DishSearchService()),
+  Provider<MenuTagRepository>(create: (_) => DishSearchService()),
+  Provider<TrendingRepository>(create: (_) => InsightsService()),
+  Provider<OwnerInsightsRepository>(create: (_) => InsightsService()),
+  Provider<DemandGapRepository>(create: (_) => DemandGapService()),
+  Provider<NotificationRepository>(create: (_) => NotificationApiService()),
+  ChangeNotifierProvider.value(value: session),
+  ChangeNotifierProvider(create: (_) => CartState()),
+  ChangeNotifierProvider(
+    create: (ctx) => OrderAgainState(repository: ctx.read<OrderRepository>(), isLoggedIn: () => session.isLoggedIn),
+  ),
+  ChangeNotifierProvider(
+    create: (ctx) => NotificationsState(repository: ctx.read<NotificationRepository>(), identity: () => session.user?.email),
+  ),
+  ChangeNotifierProvider(
+    create: (ctx) => DishSearchState(repository: ctx.read<DishSearchRepository>()),
+  ),
+  ChangeNotifierProvider(
+    create: (ctx) => TrendingState(repository: ctx.read<TrendingRepository>()),
+  ),
+  ChangeNotifierProvider(
+    create: (ctx) => DropState(
+      repository: ctx.read<DropRepository>(),
+      isLoggedIn: () => session.isLoggedIn,
+    ),
+  ),
+  ChangeNotifierProvider(
+    create: (ctx) => CheckoutController(
+      paymentRepository: ctx.read<PaymentRepository>(),
+    ),
+  ),
+];
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
