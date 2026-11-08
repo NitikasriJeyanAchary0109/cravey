@@ -337,7 +337,7 @@ flutter run -d chrome \
 
 ### Demo Mode (no Stripe account needed)
 
-The `demo` profile swaps the Stripe gateway for an in-memory fake, so you can walk the whole drop flow locally. Stripe's part (the webhook) is played by a script.
+The `demo` profile swaps the Stripe gateway for an in-memory fake, so you can walk the whole drop flow locally. Stripe's part (the webhook) is played by a script. For Stripe's real test mode, test cards and a two-minute demo script, see [docs/DEMO.md](docs/DEMO.md).
 It also creates the four accounts the app's **Quick Demo Sign-In** buttons use (customer, owner, delivery, admin), with no password, so those buttons work against a fresh database: without an account behind the demo customer, Place Order answered "User not found". They are created in the `demo` and `dev` profiles only.
 
 ```bash
