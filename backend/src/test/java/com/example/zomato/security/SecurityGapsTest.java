@@ -79,11 +79,14 @@ public class SecurityGapsTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     @BeforeEach
     void setUp() {
         authenticationService.setClock(Clock.systemDefaultZone());
         paymentRepository.deleteAll();
-        orderRepository.deleteAll();
+        com.example.zomato.TestData.wipeOrders(jdbcTemplate);
         cartItemRepository.deleteAll();
         cartRepository.deleteAll();
         customerRepository.deleteAll();

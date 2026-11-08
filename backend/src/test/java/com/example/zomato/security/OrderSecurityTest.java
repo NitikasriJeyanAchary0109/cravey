@@ -74,11 +74,14 @@ public class OrderSecurityTest {
     private String tokenDeliveryUnassigned;
     private Restaurant restaurant;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     @BeforeEach
     void setUp() {
         deliveryRepository.deleteAll();
         deliveryPartnerRepository.deleteAll();
-        orderRepository.deleteAll();
+        com.example.zomato.TestData.wipeOrders(jdbcTemplate);
         cartItemRepository.deleteAll();
         cartRepository.deleteAll();
         customerRepository.deleteAll();

@@ -61,10 +61,13 @@ public class OrderDtoLeakTest {
     private MenuItem menuItem;
     private String jwtToken;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     @BeforeEach
     void setUp() {
         orderItemRepository.deleteAll();
-        orderRepository.deleteAll();
+        com.example.zomato.TestData.wipeOrders(jdbcTemplate);
         cartItemRepository.deleteAll();
         cartRepository.deleteAll();
         customerRepository.deleteAll();

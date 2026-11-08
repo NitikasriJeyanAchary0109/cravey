@@ -84,6 +84,9 @@ public class DropCheckoutEndpointTest {
     private Drop drop;
     private MenuItem menuItem;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     @BeforeEach
     void setUp() {
         transactionTemplate = new TransactionTemplate(transactionManager);
@@ -92,7 +95,7 @@ public class DropCheckoutEndpointTest {
             cartItemRepository.deleteAll();
             cartRepository.deleteAll();
             reservationRepository.deleteAll();
-            orderRepository.deleteAll();
+            com.example.zomato.TestData.wipeOrders(jdbcTemplate);
 
             alice = userRepository.findByEmail("alice@test.com").orElseGet(() -> {
                 User u = new User("Alice", "alice@test.com", "CUSTOMER");

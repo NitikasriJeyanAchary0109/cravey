@@ -55,10 +55,13 @@ public class RestaurantMenuAndFilterTest {
     private Restaurant rIndian;
     private Restaurant rMexicanClosed;
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     @BeforeEach
     void setUp() {
         orderItemRepository.deleteAll();
-        orderRepository.deleteAll();
+        com.example.zomato.TestData.wipeOrders(jdbcTemplate);
         cartItemRepository.deleteAll();
         cartRepository.deleteAll();
         menuItemRepository.deleteAll();
