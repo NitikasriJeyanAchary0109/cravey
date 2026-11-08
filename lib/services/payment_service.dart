@@ -22,10 +22,14 @@ class PaymentPollResult {
   final OrderResponseDTO? order;
   final String? errorMessage;
 
+  /// True when the customer paid but the drop slot was gone, so the backend cancelled the order and refunds it.
+  final bool soldOutRefund;
+
   PaymentPollResult({
     required this.status,
     this.order,
     this.errorMessage,
+    this.soldOutRefund = false,
   });
 }
 
@@ -136,6 +140,7 @@ class PaymentService implements PaymentRepository {
             order: order,
             errorMessage:
                 'Sorry, this drop sold out before your payment completed. Your payment will be refunded automatically.',
+            soldOutRefund: true,
           );
         }
 

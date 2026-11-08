@@ -158,6 +158,7 @@ void main() {
     payments.pollResult = PaymentPollResult(
       status: PaymentPollStatus.failed,
       errorMessage: 'Sorry, this drop sold out before your payment completed. Your payment will be refunded automatically.',
+      soldOutRefund: true,
     );
     await open(tester);
 
@@ -167,6 +168,41 @@ void main() {
     expect(find.text('Payment not completed'), findsOneWidget);
     expect(find.textContaining('refunded automatically'), findsOneWidget);
     expect(pushed, isNot(contains('/orders-history')));
+  });
+
+  testWidgets('after a sold-out refund the screen says so and never claims the hold expired', (tester) async {
+    payments.pollResult = PaymentPollResult(
+      status: PaymentPollStatus.failed,
+      errorMessage: 'Sorry, this drop sold out before your payment completed. Your payment will be refunded automatically.',
+      soldOutRefund: true,
+    );
+    await open(tester);
+
+    drops.reservations = []; // the server cancelled the order and released the hold
+    await tester.tap(find.text('Pay ₹24.50'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sold out, payment refunded'), findsOneWidget);
+    expect(find.text('This drop sold out before your payment completed. Your payment is being refunded to your original payment method.'),
+        findsOneWidget);
+    expect(find.text('This hold has expired'), findsNothing);
+    expect(find.textContaining('The slot was released for the next person'), findsNothing);
+    expect(find.text('Pay ₹24.50'), findsNothing);
+  });
+
+  testWidgets('a plain failed payment (not a sold-out refund) does not switch to the refunded state', (tester) async {
+    payments.pollResult = PaymentPollResult(status: PaymentPollStatus.failed, errorMessage: 'Payment failed or was cancelled.');
+    await open(tester);
+
+    await tester.tap(find.text('Pay ₹24.50'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sold out, payment refunded'), findsNothing);
+    expect(find.text('Pay ₹24.50'), findsOneWidget, reason: 'hold is still live, the customer can retry');
   });
 
   testWidgets('server says the hold expired mid-checkout: explains it and refreshes', (tester) async {

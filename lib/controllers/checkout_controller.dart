@@ -31,6 +31,10 @@ class CheckoutController extends ChangeNotifier {
   PaymentPollStatus? _pollStatus;
   PaymentPollStatus? get pollStatus => _pollStatus;
 
+  bool _soldOutRefund = false;
+  /// The last payment went through but the drop had sold out, so the order is cancelled and being refunded.
+  bool get soldOutRefund => _soldOutRefund;
+
   bool get isProcessing =>
       _state == CheckoutState.creatingIntent ||
       _state == CheckoutState.awaitingPayment ||
@@ -41,6 +45,7 @@ class CheckoutController extends ChangeNotifier {
     _errorMessage = null;
     _statusText = '';
     _pollStatus = null;
+    _soldOutRefund = false;
     notifyListeners();
   }
 
@@ -48,6 +53,7 @@ class CheckoutController extends ChangeNotifier {
   Future<bool> processPayment(int orderId) async {
     _errorMessage = null;
     _pollStatus = null;
+    _soldOutRefund = false;
 
     // 1. Creating Intent
     _state = CheckoutState.creatingIntent;
@@ -79,6 +85,7 @@ class CheckoutController extends ChangeNotifier {
 
       final pollResult = await _paymentRepository.pollPaymentStatus(orderId);
       _pollStatus = pollResult.status;
+      _soldOutRefund = pollResult.soldOutRefund;
 
       if (pollResult.status == PaymentPollStatus.paid ||
           pollResult.status == PaymentPollStatus.processing) {

@@ -476,6 +476,9 @@ void main() {
       expect(find.text('Payment not completed'), findsNothing);
       expect(find.text('Place Order'), findsNothing);
       expect(backend.holds.single.status, 'CANCELLED');
+      expect(find.text('Sold out, payment refunded'), findsOneWidget);
+      expect(find.text('This drop sold out before your payment completed. Your payment is being refunded to your original payment method.'), findsOneWidget);
+      expect(find.text('This hold has expired'), findsNothing, reason: 'a refunded customer was not late, the drop sold out');
     });
 
     appTest('killing the app mid-hold and opening it again restores the hold, with the time that is really left', (tester) async {

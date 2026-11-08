@@ -31,6 +31,7 @@ class _DropCheckoutScreenState extends State<DropCheckoutScreen> {
   int? _reservationId;
   int? _orderId; // remembered so a retried payment reuses the order instead of creating a second one
   bool _paying = false;
+  bool _soldOutRefunded = false; // paid after the slot was gone: the order is cancelled and refunded, not "expired"
   DropDto? _lastDrop; // so the expired state can still link back to the drop once the server forgot the hold
 
   OrderRepository get _orders => widget.orderRepository ?? context.read<OrderRepository>();
@@ -73,6 +74,7 @@ class _DropCheckoutScreenState extends State<DropCheckoutScreen> {
         await _state?.refresh();
         nav.pushNamedAndRemoveUntil('/orders-history', (route) => route.settings.name == '/home' || route.isFirst);
       } else {
+        if (_checkout.soldOutRefund) setState(() => _soldOutRefunded = true);
         await _state?.refresh();
         _showProblem('Payment not completed', _checkout.errorMessage ?? 'Payment was not completed. You can retry while your slot is held.');
       }
@@ -120,7 +122,7 @@ class _DropCheckoutScreenState extends State<DropCheckoutScreen> {
       ),
       body: !state.loadedOnce
           ? const Center(child: CircularProgressIndicator())
-          : !live || drop == null
+          : _soldOutRefunded || !live || drop == null
               ? _expired(context, hold, drop ?? _lastDrop)
               : _checkoutBody(context, hold, drop),
     );
@@ -178,7 +180,7 @@ class _DropCheckoutScreenState extends State<DropCheckoutScreen> {
   }
 
   Widget _expired(BuildContext context, ReservationDto? hold, DropDto? drop) {
-    final confirmed = hold != null && hold.isConfirmed;
+    final confirmed = hold != null && hold.isConfirmed && !_soldOutRefunded;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(28),
@@ -188,13 +190,15 @@ class _DropCheckoutScreenState extends State<DropCheckoutScreen> {
             Icon(confirmed ? Icons.check_circle_rounded : Icons.timer_off_rounded,
                 size: 56, color: confirmed ? Colors.green.shade600 : Colors.red.shade400),
             const SizedBox(height: 14),
-            Text(confirmed ? 'Your slot is confirmed' : 'This hold has expired',
+            Text(confirmed ? 'Your slot is confirmed' : _soldOutRefunded ? 'Sold out, payment refunded' : 'This hold has expired',
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
             Text(
               confirmed
                   ? 'Payment received. Track the order from your orders.'
-                  : 'The slot was released for the next person. You can try to reserve again or join the waitlist.',
+                  : _soldOutRefunded
+                      ? 'This drop sold out before your payment completed. Your payment is being refunded to your original payment method.'
+                      : 'The slot was released for the next person. You can try to reserve again or join the waitlist.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey.shade700),
             ),
