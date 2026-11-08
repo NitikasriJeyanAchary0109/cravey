@@ -7,6 +7,7 @@ import com.example.zomato.exception.DropApiException;
 import com.example.zomato.gateway.FakeStripeGateway;
 import com.example.zomato.repository.*;
 import com.example.zomato.security.JwtService;
+import com.example.zomato.services.DropReservationScheduler;
 import com.example.zomato.services.DropService;
 import com.example.zomato.services.OrderService;
 import com.example.zomato.services.PaymentService;
@@ -51,6 +52,7 @@ public class DropHoldPolicyAndWaitlistTest {
     @Autowired private MockMvc mockMvc;
     @Autowired private JwtService jwtService;
     @Autowired private DropService dropService;
+    @Autowired private DropReservationScheduler scheduler;
     @Autowired private OrderService orderService;
     @Autowired private PaymentService paymentService;
     @Autowired private FakeStripeGateway fakeStripe;
@@ -112,6 +114,7 @@ public class DropHoldPolicyAndWaitlistTest {
     @AfterEach
     void tearDown() {
         fakeStripe.setSimulateRefundFailure(false);
+        fakeStripe.setSimulateCancelFailure(false);
     }
 
     // ------------------------------------------------------------------ helpers
@@ -132,6 +135,28 @@ public class DropHoldPolicyAndWaitlistTest {
 
     private int reservedSlots() {
         return dropRepository.findById(drop.getId()).orElseThrow().getReservedSlots();
+    }
+
+    /** Runs [action] with the after-commit event publisher removed, as if the in-memory HoldLapsedEvent were lost. */
+    private void loseAfterCommitEvents(Runnable action) {
+        Object publisher = ReflectionTestUtils.getField(dropService, "events");
+        ReflectionTestUtils.setField(dropService, "events", null);
+        try {
+            action.run();
+        } finally {
+            ReflectionTestUtils.setField(dropService, "events", publisher);
+        }
+    }
+
+    private String stripeStatus(String intentId) throws Exception {
+        return fakeStripe.retrievePaymentIntent(intentId).getStatus();
+    }
+
+    private void assertInvariantCounts(int held, int confirmed) {
+        assertEquals(held, reservationRepository.countByDrop_IdAndStatus(drop.getId(), ReservationStatus.HELD), "HELD rows");
+        assertEquals(confirmed, reservationRepository.countByDrop_IdAndStatus(drop.getId(), ReservationStatus.CONFIRMED), "CONFIRMED rows");
+        assertEquals(held + confirmed, reservedSlots(), "reservedSlots must equal count(HELD)+count(CONFIRMED)");
+        assertInvariant();
     }
 
     private void assertInvariant() {
@@ -306,6 +331,136 @@ public class DropHoldPolicyAndWaitlistTest {
         assertEquals(ReservationStatus.CONFIRMED, reservation(res.reservationId()).getStatus());
         assertEquals(1, reservedSlots());
         assertInvariant();
+    }
+
+
+    // ------------------------------------------------- sweeper reconciliation
+
+    @Test
+    @DisplayName("Lost after-commit event: the next sweep cancels the unpaid order and its PaymentIntent, and does so only once")
+    void sweepCancelsOrderWhenTheAfterCommitEventWasLost() throws Exception {
+        ReservationResponseDTO res = dropService.reserve(drop.getId(), ALICE);
+        Order order = orderService.checkoutDrop(ALICE, res.reservationId());
+        int orderId = order.getOrderId();
+        String intentId = paymentService.createPaymentIntent(orderId, ALICE).getPaymentIntentId();
+        setTimes(res.reservationId(), null, LocalDateTime.now().minusMinutes(1));
+
+        loseAfterCommitEvents(() -> assertEquals(1, dropService.expireStaleHolds()));
+
+        assertEquals(ReservationStatus.EXPIRED, reservation(res.reservationId()).getStatus());
+        assertEquals(0, reservedSlots(), "the slot itself is freed by the hold sweep");
+        assertEquals("PLACED", orderRepository.findById(orderId).orElseThrow().getStatus(), "the lost event left the order open");
+        assertEquals("requires_payment_method", stripeStatus(intentId));
+
+        assertEquals(1, scheduler.reconcileOrdersOfLapsedHolds());
+
+        assertEquals("CANCELLED", orderRepository.findById(orderId).orElseThrow().getStatus());
+        assertEquals("canceled", stripeStatus(intentId));
+        assertInvariantCounts(0, 0);
+
+        assertEquals(0, scheduler.reconcileOrdersOfLapsedHolds(), "second sweep finds nothing left to do");
+        scheduler.sweep(); // and the full scheduled sweep is a no-op on it too
+        assertEquals("CANCELLED", orderRepository.findById(orderId).orElseThrow().getStatus());
+        assertInvariantCounts(0, 0);
+    }
+
+    @Test
+    @DisplayName("Stripe down while cancelling: the order stays open and the next sweep retries until it works")
+    void sweepRetriesWhenStripeCannotCancelTheIntent() throws Exception {
+        ReservationResponseDTO res = dropService.reserve(drop.getId(), ALICE);
+        Order order = orderService.checkoutDrop(ALICE, res.reservationId());
+        int orderId = order.getOrderId();
+        String intentId = paymentService.createPaymentIntent(orderId, ALICE).getPaymentIntentId();
+        setTimes(res.reservationId(), null, LocalDateTime.now().minusMinutes(1));
+        loseAfterCommitEvents(() -> dropService.expireStaleHolds());
+
+        fakeStripe.setSimulateCancelFailure(true);
+        assertEquals(0, scheduler.reconcileOrdersOfLapsedHolds());
+        assertEquals("PLACED", orderRepository.findById(orderId).orElseThrow().getStatus(), "kept so it can be retried");
+        assertEquals(0, scheduler.reconcileOrdersOfLapsedHolds(), "still failing, still tolerated");
+        assertEquals("PLACED", orderRepository.findById(orderId).orElseThrow().getStatus());
+
+        fakeStripe.setSimulateCancelFailure(false);
+        assertEquals(1, scheduler.reconcileOrdersOfLapsedHolds());
+        assertEquals("CANCELLED", orderRepository.findById(orderId).orElseThrow().getStatus());
+        assertEquals("canceled", stripeStatus(intentId));
+        assertInvariantCounts(0, 0);
+    }
+
+    @Test
+    @DisplayName("The reconciliation sweep leaves orders with a live hold or a paid order alone")
+    void sweepIgnoresLiveHoldsAndPaidOrders() throws Exception {
+        ReservationResponseDTO res = dropService.reserve(drop.getId(), ALICE);
+        Order order = orderService.checkoutDrop(ALICE, res.reservationId());
+        assertEquals(0, scheduler.reconcileOrdersOfLapsedHolds());
+        assertEquals("PLACED", orderRepository.findById(order.getOrderId()).orElseThrow().getStatus());
+
+        // paid, then the reservation row lapses for some other reason: money was taken, never auto-cancel here
+        String intentId = paymentService.createPaymentIntent(order.getOrderId(), ALICE).getPaymentIntentId();
+        sendWebhook(webhookPayload("evt_paid_live_1", "payment_intent.succeeded", order.getOrderId(), 30.0, intentId));
+        assertEquals(ReservationStatus.CONFIRMED, reservation(res.reservationId()).getStatus());
+        assertEquals(0, scheduler.reconcileOrdersOfLapsedHolds());
+        assertEquals(PaymentStatus.PAID, orderRepository.findById(order.getOrderId()).orElseThrow().getPaymentStatus());
+        assertInvariantCounts(0, 1);
+    }
+
+    // ------------------------------------------- late payment after expiry
+
+    @Test
+    @DisplayName("Late payment_succeeded after expiry-cancellation, slot still free: slot reclaimed, order confirmed, replay is harmless")
+    void latePaymentWithFreeSlotReclaimsAndConfirms() throws Exception {
+        ReservationResponseDTO res = dropService.reserve(drop.getId(), ALICE);
+        Order order = orderService.checkoutDrop(ALICE, res.reservationId());
+        int orderId = order.getOrderId();
+        String intentId = paymentService.createPaymentIntent(orderId, ALICE).getPaymentIntentId();
+        setTimes(res.reservationId(), null, LocalDateTime.now().minusMinutes(1));
+        loseAfterCommitEvents(() -> dropService.expireStaleHolds());
+        scheduler.reconcileOrdersOfLapsedHolds(); // the sweeper cancelled the order and the intent
+        assertEquals("CANCELLED", orderRepository.findById(orderId).orElseThrow().getStatus());
+        assertInvariantCounts(0, 0);
+
+        String payload = webhookPayload("evt_late_a_1", "payment_intent.succeeded", orderId, 30.0, intentId);
+        sendWebhook(payload);
+
+        Order after = orderRepository.findById(orderId).orElseThrow();
+        assertEquals(PaymentStatus.PAID, after.getPaymentStatus());
+        assertEquals("PLACED", after.getStatus());
+        assertEquals(ReservationStatus.CONFIRMED, reservation(res.reservationId()).getStatus());
+        assertInvariantCounts(0, 1);
+
+        sendWebhook(payload); // Stripe redelivers
+        assertEquals("PLACED", orderRepository.findById(orderId).orElseThrow().getStatus());
+        assertInvariantCounts(0, 1);
+    }
+
+    @Test
+    @DisplayName("Late payment_succeeded after expiry-cancellation, slot taken by someone else: refunded, nobody oversold")
+    void latePaymentWithTakenSlotIsRefunded() throws Exception {
+        ReservationResponseDTO res = dropService.reserve(drop.getId(), ALICE);
+        Order order = orderService.checkoutDrop(ALICE, res.reservationId());
+        int orderId = order.getOrderId();
+        String intentId = paymentService.createPaymentIntent(orderId, ALICE).getPaymentIntentId();
+        setTimes(res.reservationId(), null, LocalDateTime.now().minusMinutes(1));
+        loseAfterCommitEvents(() -> dropService.expireStaleHolds());
+        scheduler.reconcileOrdersOfLapsedHolds();
+        ReservationResponseDTO bob = dropService.reserve(drop.getId(), BOB); // the only slot is taken again
+        assertInvariantCounts(1, 0);
+
+        String payload = webhookPayload("evt_late_b_1", "payment_intent.succeeded", orderId, 30.0, intentId);
+        sendWebhook(payload);
+
+        Order after = orderRepository.findById(orderId).orElseThrow();
+        assertEquals("CANCELLED", after.getStatus(), "the kitchen must not see it");
+        assertEquals(PaymentStatus.REFUNDED, after.getPaymentStatus());
+        assertEquals("REFUNDED", paymentRepository.findByOrder_OrderId(orderId).orElseThrow().getStatus());
+        assertNotEquals(ReservationStatus.CONFIRMED, reservation(res.reservationId()).getStatus());
+        assertEquals(ReservationStatus.HELD, reservation(bob.reservationId()).getStatus(), "bob keeps his slot");
+        assertInvariantCounts(1, 0);
+
+        sendWebhook(payload); // replay must not refund twice or touch bob
+        assertEquals(PaymentStatus.REFUNDED, orderRepository.findById(orderId).orElseThrow().getPaymentStatus());
+        assertEquals(ReservationStatus.HELD, reservation(bob.reservationId()).getStatus());
+        assertInvariantCounts(1, 0);
     }
 
     // ---------------------------------------------------------------- refunds

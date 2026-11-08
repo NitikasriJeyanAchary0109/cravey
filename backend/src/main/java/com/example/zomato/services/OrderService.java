@@ -376,24 +376,31 @@ public class OrderService {
      * alone - the webhook then confirms, reclaims or refunds them.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void cancelOrderForLapsedHold(int orderId) {
+    public boolean cancelOrderForLapsedHold(int orderId) {
         Order o = orderRepo.findById(orderId).orElse(null);
         if (o == null || !"PLACED".equalsIgnoreCase(o.getStatus()) || o.getPaymentStatus() == PaymentStatus.PAID) {
-            return;
+            return false;
         }
         if (!settleStripeIntentBeforeCancel(o)) {
-            return;
+            return false;
         }
         o.setStatus("CANCELLED");
         orderRepo.save(o);
         logger.info("Order {} cancelled because its drop hold lapsed unpaid", orderId);
+        return true;
+    }
+
+    /** Ids of open unpaid drop orders whose reservation is already EXPIRED or CANCELLED (see the sweeper). */
+    @Transactional(readOnly = true)
+    public List<Integer> findOrdersStrandedByLapsedHold() {
+        return dropReservationRepo.findOpenOrderIdsWithLapsedReservation();
     }
 
     /**
      * Looks at the order's PaymentIntent before an unpaid order is cancelled.
      *
      * @return true if the order may be cancelled (intent cancelled or none), false if it must be left alone
-     *         because the payment succeeded or is processing
+     *         because the payment succeeded or is processing, or Stripe could not be reached (retried later)
      */
     private boolean settleStripeIntentBeforeCancel(Order o) {
         Optional<Payment> paymentOpt = paymentRepo.findByOrder_OrderId(o.getOrderId());
@@ -428,11 +435,15 @@ public class OrderService {
                 try {
                     paymentService.cancelStripeIntent(payment.getTransactionId());
                 } catch (Exception ex) {
-                    logger.warn("Could not cancel Stripe PaymentIntent {}: {}", payment.getTransactionId(), ex.getMessage());
+                    // Leave the order open so the next sweep retries; cancelling it now would strand a payable intent.
+                    logger.warn("Could not cancel Stripe PaymentIntent {} for order {}, will retry: {}",
+                            payment.getTransactionId(), o.getOrderId(), ex.getMessage());
+                    return false;
                 }
             }
         } catch (Exception e) {
-            logger.warn("Could not check Stripe intent for order {}: {}", o.getOrderId(), e.getMessage());
+            logger.warn("Could not check Stripe intent for order {}, will retry: {}", o.getOrderId(), e.getMessage());
+            return false;
         }
         return true;
     }

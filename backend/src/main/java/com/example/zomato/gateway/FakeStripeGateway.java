@@ -23,9 +23,14 @@ public class FakeStripeGateway implements StripeGateway {
     private final Map<String, PaymentIntent> intents = new ConcurrentHashMap<>();
     private final AtomicLong counter = new AtomicLong(1000);
     private volatile boolean simulateRefundFailure = false;
+    private volatile boolean simulateCancelFailure = false;
 
     public void setSimulateRefundFailure(boolean simulateRefundFailure) {
         this.simulateRefundFailure = simulateRefundFailure;
+    }
+
+    public void setSimulateCancelFailure(boolean simulateCancelFailure) {
+        this.simulateCancelFailure = simulateCancelFailure;
     }
 
     @Override
@@ -54,6 +59,9 @@ public class FakeStripeGateway implements StripeGateway {
 
     @Override
     public PaymentIntent cancelPaymentIntent(String paymentIntentId) throws Exception {
+        if (simulateCancelFailure) {
+            throw new RuntimeException("Simulated Stripe gateway timeout while cancelling a PaymentIntent");
+        }
         PaymentIntent intent = retrievePaymentIntent(paymentIntentId);
         intent.setStatus("canceled");
         return intent;

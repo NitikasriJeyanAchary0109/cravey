@@ -20,6 +20,16 @@ public interface DropReservationRepository extends JpaRepository<DropReservation
 
     long countByDrop_IdAndCustomerEmailAndStatusIn(int dropId, String email, Collection<ReservationStatus> statuses);
 
+    /**
+     * Unpaid drop orders whose reservation has already lapsed (EXPIRED or CANCELLED) but which are still open:
+     * the after-commit cancellation was lost or could not finish, so the sweeper settles them.
+     */
+    @Query("select o.orderId from Order o, DropReservation r where r.orderId = o.orderId " +
+           "and r.status in (com.example.zomato.entity.ReservationStatus.EXPIRED, com.example.zomato.entity.ReservationStatus.CANCELLED) " +
+           "and upper(o.status) = 'PLACED' and o.paymentStatus = com.example.zomato.entity.PaymentStatus.PENDING " +
+           "order by o.orderId")
+    List<Integer> findOpenOrderIdsWithLapsedReservation();
+
     @Query("select r.id from DropReservation r where r.status = com.example.zomato.entity.ReservationStatus.HELD and r.expiresAt < :now")
     List<Integer> findStaleHeldIds(@Param("now") LocalDateTime now);
 
