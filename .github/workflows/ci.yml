@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, master, drops-payments, drops-hardening ]
+    branches: [ main, master, drops-payments, drops-hardening, pre-launch-verification ]
   pull_request:
     branches: [ main, master, drops-payments, drops-hardening ]
 
