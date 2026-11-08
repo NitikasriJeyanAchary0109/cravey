@@ -55,3 +55,18 @@ data/
 
 # owners' uploaded dish photos (local runs)
 backend/uploads/
+
+# Secrets and key material: never commit these (keep only *.example templates)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+google-services.json
+GoogleService-Info.plist
+secrets.properties
