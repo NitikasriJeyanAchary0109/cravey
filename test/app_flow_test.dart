@@ -10,6 +10,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:tomatoo/main.dart';
 import 'package:tomatoo/models/cart_state.dart';
+import 'package:tomatoo/models/drop_state.dart';
 import 'package:tomatoo/screens/admin_dashboard_screen.dart';
 import 'package:tomatoo/screens/delivery_dashboard_screen.dart';
 import 'package:tomatoo/screens/home_screen.dart';
@@ -20,12 +21,65 @@ import 'package:tomatoo/services/session_provider.dart';
 
 /// The whole app, real screens and real providers ([appProviders]), with only the network replaced: Dio talks to this
 /// in-memory backend, which answers from the JSON captured off a live backend (test/fixtures) and records every call.
+class _Hold {
+  final int id;
+  String status = 'HELD'; // HELD | CONFIRMED | CANCELLED | EXPIRED, as on the server
+  final DateTime expiresAt;
+  int? orderId;
+  _Hold(this.id, this.expiresAt);
+}
+
 class _Backend implements HttpClientAdapter {
   final List<RequestOptions> requests = [];
   String role = 'CUSTOMER';
 
   /// What GET /orders/{id} says while the app polls for the payment result.
   String polledPaymentStatus = 'PAID';
+
+  /// For a drop order: the payment went through but the slot was lost meanwhile, so the order is CANCELLED and REFUNDED.
+  bool polledRefunded = false;
+
+  // ---- a one-drop server with its own clock. Nothing here reads the real time, so a test moves it with [advance].
+  bool dropsEnabled = false;
+  DateTime now = DateTime(2026, 11, 8, 12, 0, 0);
+  final int totalSlots = 2;
+  int reservedSlots = 0;
+  final List<_Hold> holds = [];
+
+  int get remainingSlots => totalSlots - reservedSlots;
+  _Hold? get live => holds.where((h) => h.status == 'HELD').firstOrNull;
+
+  /// Moves the server clock on and releases the holds that ran out, as the server's expiry job does.
+  void advance(Duration d) {
+    now = now.add(d);
+    for (final h in holds) {
+      if (h.status == 'HELD' && !h.expiresAt.isAfter(now)) {
+        h.status = 'EXPIRED';
+        reservedSlots--;
+      }
+    }
+  }
+
+  String _ts(DateTime d) => d.toIso8601String();
+
+  Map<String, dynamic> _dropJson() => {
+        ..._json('api_drop'),
+        'startsAt': _ts(now.subtract(const Duration(minutes: 5))),
+        'endsAt': _ts(now.add(const Duration(hours: 2))),
+        'totalSlots': totalSlots,
+        'remainingSlots': remainingSlots,
+        'status': remainingSlots == 0 ? 'SOLD_OUT' : 'LIVE',
+        'serverTime': _ts(now),
+      };
+
+  Map<String, dynamic> _holdJson(_Hold h) => {
+        'reservationId': h.id,
+        'dropId': 4,
+        'status': h.status,
+        'expiresAt': _ts(h.expiresAt),
+        'orderId': h.orderId,
+        'serverTime': _ts(now),
+      };
 
   Map<String, dynamic> _json(String name) => jsonDecode(File('test/fixtures/$name.json').readAsStringSync()) as Map<String, dynamic>;
 
@@ -64,11 +118,44 @@ class _Backend implements HttpClientAdapter {
       case 'POST /cart/add':
         return (200, {'id': 1, 'cartId': 5, 'itemId': 11, 'price': 429, 'quantity': 2});
       case 'POST /orders/checkout':
+        if (o.queryParameters.containsKey('reservationId')) {
+          final hold = holds.singleWhere((h) => h.id == o.queryParameters['reservationId']);
+          hold.orderId = 1;
+        }
         return (200, _json('api_order_pending'));
       case 'POST /payment/create':
         return (200, _json('api_payment_intent'));
       case 'GET /orders/1':
+        if (polledRefunded) {
+          for (final h in holds.where((h) => h.orderId == 1 && h.status == 'HELD')) {
+            h.status = 'CANCELLED'; // the slot went to someone else; nothing is returned to stock
+          }
+          return (200, {..._json('api_order_refunded'), 'orderId': 1});
+        }
+        if (polledPaymentStatus == 'PAID') {
+          for (final h in holds.where((h) => h.orderId == 1 && h.status == 'HELD')) {
+            h.status = 'CONFIRMED';
+          }
+        }
         return (200, {..._json('api_order_paid'), 'paymentStatus': polledPaymentStatus});
+      case 'GET /drops':
+        return (200, dropsEnabled ? [_dropJson()] : <dynamic>[]);
+      case 'GET /drops/waitlist/mine':
+        return (200, <dynamic>[]);
+      case 'GET /drops/reservations/mine':
+        // the real query: CONFIRMED, or HELD and not yet expired
+        return (200, [
+          for (final h in holds)
+            if (h.status == 'CONFIRMED' || (h.status == 'HELD' && h.expiresAt.isAfter(now))) _holdJson(h)
+        ]);
+      case 'POST /drops/4/reserve':
+        final existing = live;
+        if (existing != null) return (200, _holdJson(existing));
+        if (remainingSlots == 0) return (409, _json('api_error_sold_out'));
+        final hold = _Hold(holds.length + 1, now.add(const Duration(minutes: 10)));
+        holds.add(hold);
+        reservedSlots++;
+        return (201, _holdJson(hold));
     }
     return (404, {'message': 'not mocked: $key'});
   }
@@ -158,14 +245,14 @@ void main() {
 
   /// Signs in through the app's own demo sign-in (so the session, the token and the role come from the code under test),
   /// mounts the real app tree and lets the splash screen send the user where their role belongs.
-  Future<SessionProvider> openAppSignedInAs(WidgetTester tester, String role) async {
+  Future<SessionProvider> openAppSignedInAs(WidgetTester tester, String role, {DateTime Function()? clock}) async {
     await tester.binding.setSurfaceSize(const Size(420, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     backend.role = role;
     final session = SessionProvider();
     await tester.runAsync(() => session.loginAsDemo(role));
     AuthService.instance.setTokensForTesting(accessToken: 'token-$role', refreshToken: 'refresh-$role');
-    await tester.pumpWidget(MultiProvider(providers: appProviders(session), child: const MyApp()));
+    await tester.pumpWidget(MultiProvider(providers: appProviders(session, clock: clock), child: const MyApp()));
     await tester.pump(const Duration(milliseconds: 3000)); // splash timer
     await settle(tester);
     addTearDown(() async {
@@ -294,6 +381,133 @@ void main() {
 
       expect(backend.count('POST', '/orders/checkout'), 1);
       expect(backend.count('POST', '/payment/create'), 1);
+    });
+  });
+
+  group('drop flow: reserve, hold countdown, expiry, refund, restart', () {
+    setUp(() => backend.dropsEnabled = true);
+
+    /// A phone whose clock is off from the server's by [skew]. It still ticks in step with the server, which is all a clock does.
+    DateTime Function() phoneClock(Duration skew) => () => backend.now.add(skew);
+
+    /// Lets [total] of server time pass in small steps, so the countdown, the poll timer and the expiry job all get their turn.
+    Future<void> elapse(WidgetTester tester, Duration total, {Duration step = const Duration(seconds: 2)}) async {
+      var left = total;
+      while (left > Duration.zero) {
+        final d = left < step ? left : step;
+        backend.advance(d);
+        await tester.pump(d);
+        await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 5)));
+        left -= d;
+      }
+    }
+
+    DropState dropState(WidgetTester tester) => tester.element(find.byType(Scaffold).first).read<DropState>();
+
+    /// What the hold banner's countdown currently says.
+    String countdown(WidgetTester tester, {int reservationId = 1}) => tester
+        .widget<Text>(find.descendant(of: find.byKey(ValueKey('hold-countdown-$reservationId')), matching: find.byType(Text)))
+        .data!;
+
+    /// Home -> the drop -> Reserve a slot. Ends on the drop checkout screen, with the hold ticking.
+    Future<void> reserveTheDrop(WidgetTester tester, {Duration skew = Duration.zero}) async {
+      await openAppSignedInAs(tester, 'CUSTOMER', clock: phoneClock(skew));
+      await tester.ensureVisible(find.text('E2E Wagyu Drop'));
+      await tester.pump();
+      await tester.tap(find.text('E2E Wagyu Drop'));
+      await settle(tester);
+      expect(find.text('2 of 2 slots left'), findsOneWidget);
+      await tester.tap(find.text('Reserve a slot'));
+      await settle(tester);
+      expect(find.text('Drop checkout'), findsOneWidget, reason: 'a successful reserve opens checkout');
+      expect(backend.count('POST', '/drops/4/reserve'), 1);
+    }
+
+    for (final skew in const [Duration(hours: 2), Duration(hours: -3)]) {
+      appTest('the hold counts down on the server clock and expires on it, with the phone ${skew.isNegative ? 'behind' : 'ahead'} by ${skew.inHours.abs()}h', (tester) async {
+        await reserveTheDrop(tester, skew: skew);
+
+        // whatever the phone thinks, ten minutes were granted and ten minutes are shown
+        expect(countdown(tester), '10:00');
+        expect(dropState(tester).dropById(4)!.remainingSlots, 1, reason: 'the held slot is out of stock');
+
+        await elapse(tester, const Duration(minutes: 3, seconds: 30));
+        expect(countdown(tester), '06:30');
+        expect(find.text('Pay ₹24.50'), findsOneWidget);
+
+        await elapse(tester, const Duration(minutes: 6, seconds: 26));
+        expect(countdown(tester), '00:04');
+        expect(find.text('Pay ₹24.50'), findsOneWidget, reason: 'four seconds of hold are still a hold');
+
+        await elapse(tester, const Duration(seconds: 4));
+        await settle(tester, steps: 5);
+        expect(find.text('This hold has expired'), findsOneWidget, reason: 'the hold ran out on the server');
+        expect(find.text('Pay ₹24.50'), findsNothing);
+        expect(backend.holds.single.status, 'EXPIRED');
+
+        // and the slot is back for the next person
+        await tester.tap(find.text('Back to drop'));
+        await settle(tester);
+        expect(find.text('2 of 2 slots left'), findsOneWidget, reason: 'stock went back up');
+        expect(find.text('Reserve a slot'), findsOneWidget);
+        expect(find.byKey(const ValueKey('hold-banner')), findsNothing);
+        expect(dropState(tester).dropById(4)!.remainingSlots, 2);
+      });
+    }
+
+    appTest('paid, but the slot was lost meanwhile: the order is CANCELLED and REFUNDED and the customer is told so', (tester) async {
+      await reserveTheDrop(tester);
+      backend.polledRefunded = true;
+
+      await tester.ensureVisible(find.text('Pay ₹24.50'));
+      await tester.pump();
+      await tester.tap(find.text('Pay ₹24.50'));
+      await settle(tester, steps: 60);
+
+      expect(backend.count('POST', '/orders/checkout'), 1);
+      expect(backend.requests.firstWhere((r) => r.path == '/orders/checkout').queryParameters, {'reservationId': 1});
+      expect(backend.count('POST', '/payment/create'), 1);
+      expect(find.text('Payment not completed'), findsOneWidget);
+      expect(find.text('Sorry, this drop sold out before your payment completed. Your payment will be refunded automatically.'), findsOneWidget);
+      expect(find.text('Payment successful! Your slot is secured.'), findsNothing, reason: 'a refunded order is never shown as a success');
+
+      await tester.tap(find.text('OK'));
+      await settle(tester, steps: 5);
+      expect(find.text('Payment not completed'), findsNothing);
+      expect(find.text('Place Order'), findsNothing);
+      expect(backend.holds.single.status, 'CANCELLED');
+    });
+
+    appTest('killing the app mid-hold and opening it again restores the hold, with the time that is really left', (tester) async {
+      await reserveTheDrop(tester, skew: const Duration(hours: 2));
+      await elapse(tester, const Duration(minutes: 3));
+      expect(countdown(tester), '07:00');
+
+      // the app is killed: nothing of the old DropState survives
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+      final before = backend.requests.length;
+
+      // a cold start, on a phone whose clock is now somewhere else entirely
+      await openAppSignedInAs(tester, 'CUSTOMER', clock: phoneClock(const Duration(minutes: -45)));
+      final afterRestart = backend.requests.skip(before);
+      expect(afterRestart.any((r) => r.method == 'GET' && r.path == '/drops/reservations/mine'), isTrue, reason: 'the hold comes from the server');
+      expect(afterRestart.any((r) => r.method == 'POST' && r.path == '/drops/4/reserve'), isFalse, reason: 'it was restored, not taken again');
+      expect(backend.holds, hasLength(1));
+
+      expect(find.byKey(const ValueKey('hold-banner')), findsOneWidget);
+      expect(countdown(tester), '07:00');
+      expect(dropState(tester).activeHold?.reservationId, 1);
+
+      // and the restored hold is still payable
+      await elapse(tester, const Duration(minutes: 1));
+      expect(countdown(tester), '06:00');
+      await tester.ensureVisible(find.text('Checkout'));
+      await tester.pump();
+      await tester.tap(find.text('Checkout'));
+      await settle(tester);
+      expect(find.text('Drop checkout'), findsOneWidget);
+      expect(find.text('Pay ₹24.50'), findsOneWidget);
     });
   });
 }

@@ -38,7 +38,10 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @Tag("postgres")
 @Testcontainers
@@ -78,6 +81,7 @@ public class DropPostgresIntegrationTest {
     @Autowired private ProcessedWebhookEventRepository processedWebhookEventRepository;
     @Autowired private PlatformTransactionManager transactionManager;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private com.example.zomato.security.JwtService jwtService;
 
     private TransactionTemplate transactionTemplate;
     private final String testWebhookSecret = "whsec_test_secret_postgres_suite_12345";
@@ -157,6 +161,18 @@ public class DropPostgresIntegrationTest {
         assertEquals(d.getReservedSlots(), held + confirmed,
                 String.format("Invariant violation on Postgres for drop %d: reservedSlots=%d, held=%d, confirmed=%d",
                         dropId, d.getReservedSlots(), held, confirmed));
+        assertTrue(d.getReservedSlots() >= 0 && d.getReservedSlots() <= d.getTotalSlots(),
+                "reservedSlots must stay within [0, totalSlots]: " + d.getReservedSlots() + "/" + d.getTotalSlots());
+        assertEquals(d.getTotalSlots() - d.getReservedSlots(), d.getAvailableSlots(),
+                "availableSlots must equal totalSlots - reservedSlots");
+        // what the app is told must agree with what the database holds
+        try {
+            mockMvc.perform(get("/drops/" + dropId))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.remainingSlots").value(d.getAvailableSlots()));
+        } catch (Exception e) {
+            throw new AssertionError("GET /drops/" + dropId + " disagrees with the database: " + e.getMessage(), e);
+        }
     }
 
     @Test
@@ -289,6 +305,105 @@ public class DropPostgresIntegrationTest {
         Drop after = dropRepository.findById(drop.getId()).orElseThrow();
         assertEquals(totalSlots, after.getReservedSlots(), "Zero-Oversell: reservedSlots never exceeds totalSlots");
         assertEquals(totalSlots, reservationRepository.countByDrop_IdAndStatus(drop.getId(), ReservationStatus.HELD));
+        assertSlotInvariant(drop.getId());
+
+        // the 500 callers are 500 different accounts, and the 20 holds belong to 20 different people
+        java.util.Set<String> callers = new java.util.HashSet<>();
+        for (int i = 0; i < contenders; i++) callers.add("pg_mass_user_" + (alreadyTaken + i) + "@cravey.com");
+        assertEquals(contenders, callers.size(), "500 distinct callers");
+        Integer distinctHolders = jdbcTemplate.queryForObject(
+                "SELECT COUNT(DISTINCT customer_email) FROM drop_reservations WHERE drop_id = ?", Integer.class, drop.getId());
+        assertEquals(totalSlots, distinctHolders, "no person holds two of the slots");
+    }
+
+    @Test
+    void testPostgres_500DistinctUsersOverHttp_rateLimiterNeverBlocksALegitimateBuyer_sameOutcome() throws Exception {
+        int totalSlots = 20, alreadyTaken = 17, contenders = 500;
+        Drop drop = transactionTemplate.execute(status -> {
+            Drop d = new Drop();
+            d.setTitle("Postgres 500-User HTTP Race Drop");
+            d.setPrice(75.0);
+            d.setTotalSlots(totalSlots);
+            d.setReservedSlots(0);
+            d.setRestaurantId(restaurant.getId());
+            d.setStartsAt(LocalDateTime.now().minusMinutes(1));
+            d.setEndsAt(LocalDateTime.now().plusHours(1));
+            return dropRepository.save(d);
+        });
+        for (int i = 0; i < alreadyTaken + contenders; i++) {
+            String email = "pg_http_user_" + i + "@cravey.com";
+            transactionTemplate.execute(status -> { ensureCustomerUser(email); return null; });
+        }
+        // the first 17 buy through the same endpoint, one after another
+        for (int i = 0; i < alreadyTaken; i++) {
+            String token = "Bearer " + jwtService.generateToken("pg_http_user_" + i + "@cravey.com", "CUSTOMER");
+            mockMvc.perform(post("/drops/" + drop.getId() + "/reserve").header("Authorization", token))
+                    .andExpect(status().isCreated());
+        }
+        assertSlotInvariant(drop.getId());
+
+        ExecutorService pool = Executors.newFixedThreadPool(contenders);
+        CountDownLatch ready = new CountDownLatch(contenders);
+        CountDownLatch go = new CountDownLatch(1);
+        ConcurrentHashMap<Integer, AtomicInteger> byStatus = new ConcurrentHashMap<>();
+        ConcurrentLinkedQueue<String> unexpected = new ConcurrentLinkedQueue<>();
+        for (int i = 0; i < contenders; i++) {
+            final String email = "pg_http_user_" + (alreadyTaken + i) + "@cravey.com";
+            final String token = "Bearer " + jwtService.generateToken(email, "CUSTOMER");
+            pool.submit(() -> {
+                ready.countDown();
+                try {
+                    go.await();
+                    MvcResult r = mockMvc.perform(post("/drops/" + drop.getId() + "/reserve").header("Authorization", token)).andReturn();
+                    byStatus.computeIfAbsent(r.getResponse().getStatus(), k -> new AtomicInteger()).incrementAndGet();
+                } catch (Exception ex) {
+                    unexpected.add(ex.getClass().getSimpleName() + ": " + ex.getMessage());
+                }
+            });
+        }
+        assertTrue(ready.await(30, TimeUnit.SECONDS));
+        go.countDown();
+        pool.shutdown();
+        assertTrue(pool.awaitTermination(180, TimeUnit.SECONDS));
+
+        assertTrue(unexpected.isEmpty(), unexpected.toString());
+        int won = byStatus.getOrDefault(201, new AtomicInteger()).get();
+        int soldOut = byStatus.getOrDefault(409, new AtomicInteger()).get();
+        assertEquals(0, byStatus.getOrDefault(429, new AtomicInteger()).get(),
+                "each buyer is a different account with a fresh bucket, so nobody is rate limited: " + byStatus);
+        assertEquals(totalSlots - alreadyTaken, won, "exactly the three remaining slots are won over HTTP: " + byStatus);
+        assertEquals(contenders - won, soldOut, "everyone else gets 409 SOLD_OUT: " + byStatus);
+        assertEquals(totalSlots, dropRepository.findById(drop.getId()).orElseThrow().getReservedSlots());
+        assertSlotInvariant(drop.getId());
+    }
+
+    @Test
+    void testPostgres_oneUserHammeringReserveIsRateLimited_andThrottledCallsNeverTakeASlot() throws Exception {
+        Drop drop = transactionTemplate.execute(status -> {
+            Drop d = new Drop();
+            d.setTitle("Postgres Hoarder Drop");
+            d.setPrice(75.0);
+            d.setTotalSlots(5);
+            d.setReservedSlots(0);
+            d.setRestaurantId(restaurant.getId());
+            d.setStartsAt(LocalDateTime.now().minusMinutes(1));
+            d.setEndsAt(LocalDateTime.now().plusHours(1));
+            return dropRepository.save(d);
+        });
+        String hoarder = "pg_hoarder@cravey.com";
+        transactionTemplate.execute(status -> { ensureCustomerUser(hoarder); return null; });
+        String token = "Bearer " + jwtService.generateToken(hoarder, "CUSTOMER");
+
+        int ok = 0, throttled = 0;
+        for (int i = 0; i < 30; i++) {
+            int s = mockMvc.perform(post("/drops/" + drop.getId() + "/reserve").header("Authorization", token))
+                    .andReturn().getResponse().getStatus();
+            if (s == 201 || s == 200) ok++; else if (s == 429) throttled++;
+        }
+        assertEquals(10, ok, "the bucket allows 10 attempts a minute");
+        assertEquals(20, throttled, "the rest are told to slow down");
+        assertEquals(1, dropRepository.findById(drop.getId()).orElseThrow().getReservedSlots(),
+                "one account holds one slot however often it asks, and throttled calls take none");
         assertSlotInvariant(drop.getId());
     }
 

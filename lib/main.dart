@@ -91,8 +91,9 @@ void main() async {
 }
 
 /// Every provider the app runs with. [main] and the whole-app widget tests both build the tree from this list,
-/// so a test mounts the same wiring the app does.
-List<SingleChildWidget> appProviders(SessionProvider session) => [
+/// so a test mounts the same wiring the app does. [clock] is the device clock the drop countdowns start from;
+/// only tests pass it.
+List<SingleChildWidget> appProviders(SessionProvider session, {DateTime Function()? clock}) => [
   Provider<RestaurantRepository>(create: (_) => RestaurantService()),
   Provider<CartRepository>(create: (_) => CartService()),
   Provider<OrderRepository>(create: (_) => OrderService()),
@@ -122,6 +123,7 @@ List<SingleChildWidget> appProviders(SessionProvider session) => [
     create: (ctx) => DropState(
       repository: ctx.read<DropRepository>(),
       isLoggedIn: () => session.isLoggedIn,
+      clock: clock,
     ),
   ),
   ChangeNotifierProvider(
