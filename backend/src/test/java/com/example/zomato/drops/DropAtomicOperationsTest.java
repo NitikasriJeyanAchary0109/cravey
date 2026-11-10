@@ -115,6 +115,8 @@ public class DropAtomicOperationsTest {
     @Test
     void testAttachOrderSuccess() {
         ReservationResponseDTO res = dropService.reserve(drop.getId(), "alice@cravey.com");
+        // compare with what the database stored, not the in-memory value from reserve(): the column rounds the timestamp
+        LocalDateTime storedBefore = reservationRepository.findById(res.reservationId()).orElseThrow().getExpiresAt();
         LocalDateTime beforeAttach = LocalDateTime.now();
 
         dropService.attachOrder(res.reservationId(), 1001, "alice@cravey.com");
@@ -124,7 +126,7 @@ public class DropAtomicOperationsTest {
         assertEquals(ReservationStatus.HELD, updated.getStatus());
         // One timer rule: checkout guarantees at least 5 more minutes but never shortens the 10-minute hold,
         // and no extension passes the 20-minute hard cap.
-        assertFalse(updated.getExpiresAt().isBefore(res.expiresAt()), "attachOrder must never shorten the hold");
+        assertFalse(updated.getExpiresAt().isBefore(storedBefore), "attachOrder must never shorten the hold");
         assertFalse(updated.getExpiresAt().isBefore(beforeAttach.plusMinutes(5).minusSeconds(1)),
                 "checkout guarantees at least min-payment-minutes");
         assertTrue(updated.getExpiresAt().isBefore(updated.getCreatedAt().plusMinutes(20).plusSeconds(1)),
