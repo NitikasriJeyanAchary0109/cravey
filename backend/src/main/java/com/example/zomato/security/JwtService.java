@@ -25,11 +25,23 @@ public class JwtService {
     @jakarta.annotation.PostConstruct
     void verifySecret() {
         if (!KNOWN_DEFAULT_SECRET.equals(secret)) return;
+        var log = org.slf4j.LoggerFactory.getLogger(JwtService.class);
         if (environment != null && environment.acceptsProfiles(org.springframework.core.env.Profiles.of("prod", "production"))) {
             throw new IllegalStateException("JWT_SECRET is not set: refusing to start the prod profile with the signing key published in the repository.");
         }
-        org.slf4j.LoggerFactory.getLogger(JwtService.class)
-                .warn("Signing tokens with the default JWT secret from the repository. Fine for local development; set JWT_SECRET anywhere else (the prod profile refuses to start without it).");
+        // The published key stays usable only where a throwaway local run is the point. Anywhere else (no profile, staging, a server someone
+        // forgot to configure) it would let anyone who has read the repository sign in as any account, so this process gets a random key
+        // instead: tokens still work, they just do not survive a restart and cannot be forged.
+        if (environment == null || !environment.acceptsProfiles(org.springframework.core.env.Profiles.of("dev", "demo", "test"))) {
+            byte[] random = new byte[48];
+            new java.security.SecureRandom().nextBytes(random);
+            secret = java.util.Base64.getEncoder().encodeToString(random);
+            log.warn("JWT_SECRET is not set and no dev/demo/test profile is active, so the key published in the repository is NOT used. "
+                    + "Signing tokens with a random key for this process only: sessions end when it restarts. Set JWT_SECRET for anything beyond a local try-out.");
+            return;
+        }
+        log.warn("Signing tokens with the default JWT secret from the repository (dev/demo/test profile). Only run this on your own machine; "
+                + "set JWT_SECRET anywhere else (the prod profile refuses to start without it).");
     }
 
     @Value("${jwt.access-token-validity-seconds:900}")

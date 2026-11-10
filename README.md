@@ -472,7 +472,7 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
 ### Before you deploy
 
-- Set `JWT_SECRET` to a long random value. Without it the app signs tokens with a key that is in this repository, so anyone could make a token for any account. Run production with `SPRING_PROFILES_ACTIVE=prod`: that profile refuses to start on the default key. Other profiles only log a warning.
+- Set `JWT_SECRET` to a long random value. Without it the app signs tokens with a key that is in this repository, so anyone could make a token for any account. Run production with `SPRING_PROFILES_ACTIVE=prod`: that profile refuses to start on the default key. The `dev`, `demo` and `test` profiles may use it (own machine only); any other run without `JWT_SECRET` signs with a random key made at startup, so nobody can forge tokens, but sessions end on restart.
 - Leave `SEED_DEMO_ACCOUNTS` unset (off) and do not use the `demo` or `dev` profiles on a database real people use: they create accounts with known credentials.
 - **Quick Demo Sign-In** and the role switcher are issued by the backend (`POST /api/auth/demo-login`), which exists only in the `demo` and `dev` profiles, and only for the four fixed demo accounts. The app holds no signing key. Even so, the buttons are shown only in debug builds or builds made with `--dart-define=ENABLE_DEMO_LOGIN=true`, so do not set that for a release.
 

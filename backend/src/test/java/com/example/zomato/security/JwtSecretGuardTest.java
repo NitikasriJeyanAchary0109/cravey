@@ -33,10 +33,37 @@ class JwtSecretGuardTest {
     }
 
     @Test
-    void localDevelopmentMayUseTheDefaultWithOnlyAWarning() {
-        assertDoesNotThrow(() -> service(JwtService.KNOWN_DEFAULT_SECRET).verifySecret());
-        assertDoesNotThrow(() -> service(JwtService.KNOWN_DEFAULT_SECRET, "dev").verifySecret());
-        assertDoesNotThrow(() -> service(JwtService.KNOWN_DEFAULT_SECRET, "demo").verifySecret());
+    void devDemoAndTestProfilesMayUseTheDefaultWithOnlyAWarning() {
+        for (String profile : new String[]{"dev", "demo", "test"}) {
+            JwtService s = service(JwtService.KNOWN_DEFAULT_SECRET, profile);
+            assertDoesNotThrow(s::verifySecret);
+            assertEquals(JwtService.KNOWN_DEFAULT_SECRET, ReflectionTestUtils.getField(s, "secret"), profile + " keeps the published key");
+        }
+    }
+
+    @Test
+    void anyOtherRunNeverSignsWithThePublishedKey() {
+        for (String[] profiles : new String[][]{{}, {"staging"}, {"qa", "metrics"}}) {
+            JwtService s = service(JwtService.KNOWN_DEFAULT_SECRET, profiles);
+            assertDoesNotThrow(s::verifySecret);
+            String used = (String) ReflectionTestUtils.getField(s, "secret");
+            assertNotEquals(JwtService.KNOWN_DEFAULT_SECRET, used, "profiles " + java.util.Arrays.toString(profiles));
+            assertTrue(used.length() >= 48, "long enough for HS256");
+            // a token signed with the published key is rejected, while the process's own tokens still verify
+            JwtService attacker = service(JwtService.KNOWN_DEFAULT_SECRET, "dev");
+            String forged = attacker.generateToken("admin@cravey.com", "ADMIN");
+            assertThrows(Exception.class, () -> s.extractUsername(forged));
+            assertEquals("a@b.com", s.extractUsername(s.generateToken("a@b.com", "CUSTOMER")));
+        }
+    }
+
+    @Test
+    void eachProcessGetsItsOwnRandomKey() {
+        JwtService one = service(JwtService.KNOWN_DEFAULT_SECRET);
+        JwtService two = service(JwtService.KNOWN_DEFAULT_SECRET);
+        one.verifySecret();
+        two.verifySecret();
+        assertNotEquals(ReflectionTestUtils.getField(one, "secret"), ReflectionTestUtils.getField(two, "secret"));
     }
 
     @Test
